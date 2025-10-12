@@ -101,7 +101,7 @@ namespace MaxSpecialModifiers
 					modifierInstance.Affix.Affix.Tags.Intersect(targetTags).Any())
 				{
 					// Maximize this modifier's values
-					SetModifierInstanceToMax(modifierInstance);
+					SetModifierInstanceToMax(modifierInstance, item);
 					modifiedCount++;
 
 					Debug.Log($"[MaxSpecialModifiers] Maximized modifier: {modifierInstance.Modifier.Stat?.StatDisplayName} " +
@@ -125,7 +125,7 @@ namespace MaxSpecialModifiers
 		/// <summary>
 		/// Sets a ModifierInstance to its maximum values using reflection
 		/// </summary>
-		private static void SetModifierInstanceToMax(ModifierInstance instance)
+		private static void SetModifierInstanceToMax(ModifierInstance instance, ItemInstance item)
 		{
 			if (instance?.Modifier == null || lowerField == null || upperField == null)
 			{
@@ -143,8 +143,8 @@ namespace MaxSpecialModifiers
 				Debug.Log($"[MaxSpecialModifiers] Modifier properties - LowerMin: {modifier.LowerMin:F3}, LowerMax: {modifier.LowerMax:F3}, LowerPerLevel: {modifier.LowerPerLevel:F3}");
 
 				// Calculate max values accounting for level scaling and attributes
-				float maxLower = CalculateMaxLower(modifier, instance);
-				float maxUpper = CalculateMaxUpper(modifier, instance);
+				float maxLower = CalculateMaxLower(modifier, instance, item);
+				float maxUpper = CalculateMaxUpper(modifier, instance, item);
 
 				Debug.Log($"[MaxSpecialModifiers] Calculated max values - Lower: {maxLower:F3}, Upper: {maxUpper:F3}");
 
@@ -166,20 +166,26 @@ namespace MaxSpecialModifiers
 		/// <summary>
 		/// Calculates the maximum lower value for a modifier
 		/// </summary>
-		private static float CalculateMaxLower(Modifier modifier, ModifierInstance instance)
+		private static float CalculateMaxLower(Modifier modifier, ModifierInstance instance, ItemInstance item)
 		{
 			// Base max value
 			float maxValue = Mathf.Max(modifier.LowerMin, modifier.LowerMax);
 
-			// Account for level scaling - we need to determine the item level
-			// For now, we'll use a conservative approach and assume level 1 scaling
-			// This could be improved by getting the actual item level
-			maxValue += modifier.LowerPerLevel * 1f; // Assuming level 1 for now
+			// Get the actual item level from the item that contains this modifier
+			int itemLevel = item?.Level ?? 1;
+
+			// Account for level scaling using the actual item level
+			// Handle invalid LowerPerLevel values (NaN, infinity) by defaulting to 0
+			float lowerPerLevel = float.IsNaN(modifier.LowerPerLevel) || float.IsInfinity(modifier.LowerPerLevel) ? 0f : modifier.LowerPerLevel;
+			maxValue += lowerPerLevel * itemLevel;
+
+			Debug.Log($"[MaxSpecialModifiers] CalculateMaxLower - Base: {Mathf.Max(modifier.LowerMin, modifier.LowerMax):F3}, LowerPerLevel: {lowerPerLevel:F3}, ItemLevel: {itemLevel}, Scaling: {lowerPerLevel * itemLevel:F3}");
 
 			// Apply multiplier from the affix if present
 			if (instance.Affix != null)
 			{
 				maxValue *= instance.Affix.Multiplier;
+				Debug.Log($"[MaxSpecialModifiers] Applied affix multiplier: {instance.Affix.Multiplier:F3}, Final: {maxValue:F3}");
 			}
 
 			return maxValue;
@@ -188,21 +194,30 @@ namespace MaxSpecialModifiers
 		/// <summary>
 		/// Calculates the maximum upper value for a modifier
 		/// </summary>
-		private static float CalculateMaxUpper(Modifier modifier, ModifierInstance instance)
+		private static float CalculateMaxUpper(Modifier modifier, ModifierInstance instance, ItemInstance item)
 		{
 			// Base max value
 			float maxValue = Mathf.Max(modifier.UpperMin, modifier.UpperMax);
 
-			// Account for level scaling
-			maxValue += modifier.UpperPerLevel * 1f; // Assuming level 1 for now
+			// Get the actual item level from the item that contains this modifier
+			int itemLevel = item?.Level ?? 1;
+
+			// Account for level scaling using the actual item level
+			// Handle invalid UpperPerLevel values (NaN, infinity) by defaulting to 0
+			float upperPerLevel = float.IsNaN(modifier.UpperPerLevel) || float.IsInfinity(modifier.UpperPerLevel) ? 0f : modifier.UpperPerLevel;
+			maxValue += upperPerLevel * itemLevel;
+
+			Debug.Log($"[MaxSpecialModifiers] CalculateMaxUpper - Base: {Mathf.Max(modifier.UpperMin, modifier.UpperMax):F3}, UpperPerLevel: {upperPerLevel:F3}, ItemLevel: {itemLevel}, Scaling: {upperPerLevel * itemLevel:F3}");
 
 			// Apply multiplier from the affix if present
 			if (instance.Affix != null)
 			{
 				maxValue *= instance.Affix.Multiplier;
+				Debug.Log($"[MaxSpecialModifiers] Applied affix multiplier: {instance.Affix.Multiplier:F3}, Final: {maxValue:F3}");
 			}
 
 			return maxValue;
 		}
+
 	}
 }
