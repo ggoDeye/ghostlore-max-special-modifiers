@@ -34,6 +34,10 @@ namespace MaxSpecialModifiers
 				}
 
 				Debug.Log($"[MaxSpecialModifiers] Processing special modifiers for tags: {string.Join(", ", tags.Select(t => t.GameTagName))}");
+
+				// Force implicit affixes if applicable
+				ForceImplicitAffixes(__instance, tags);
+
 				MaximizeImplicitModifiers(__instance);
 			}
 			catch (System.Exception ex)
@@ -173,6 +177,84 @@ namespace MaxSpecialModifiers
 			// Note: ItemAffix doesn't have a Multiplier property in this version
 
 			return totalValue;
+		}
+
+		/// <summary>
+		/// Forces Keropok affixes to have specific modifiers (e.g., Increasedbuffeffect with Multiplicative)
+		/// </summary>
+		private static void ForceImplicitAffixes(ItemInstance item, GameTag[] tags)
+		{
+			try
+			{
+				// future task: add a way to force implicit affixes for other tags
+
+				// Check if this is a Keropok item
+				if (!tags.Any(tag => tag?.GameTagName?.Contains("Keropok") == true))
+				{
+					return;
+				}
+
+				Debug.Log($"[MaxSpecialModifiers] Forcing Keropok affixes for item: {item.Item?.ItemName}");
+
+				// Get all affixes from ItemManager
+				var itemManager = Singleton<ItemManager>.instance;
+				if (itemManager == null)
+				{
+					Debug.LogError($"[MaxSpecialModifiers] ItemManager instance is null");
+					return;
+				}
+
+				// Access the affixes pool through reflection since it's private
+				var affixesPoolField = typeof(ItemManager).GetField("affixesPool", BindingFlags.NonPublic | BindingFlags.Instance);
+				if (affixesPoolField == null)
+				{
+					Debug.LogError($"[MaxSpecialModifiers] Could not find affixesPool field in ItemManager");
+					return;
+				}
+
+				var allAffixes = (ItemAffix[])affixesPoolField.GetValue(itemManager);
+				if (allAffixes == null)
+				{
+					Debug.LogError($"[MaxSpecialModifiers] affixesPool is null");
+					return;
+				}
+
+				// Look for the Keropok affix with StatID.Increasedbuffeffect modifier AND Multiplicative attribute
+				var buffEffectAffix = allAffixes.FirstOrDefault(affix =>
+					affix?.Modifiers != null &&
+					affix.Modifiers.Any(modifier =>
+						modifier.Stat != null &&
+						modifier.Stat.ID == (int)StatID.Increasedbuffeffect &&
+						(modifier.Attributes & ModifierAttributes.Multiplicative) != 0));
+
+				if (buffEffectAffix == null)
+				{
+					Debug.LogWarning($"[MaxSpecialModifiers] Could not find Keropok affix with Increasedbuffeffect and Multiplicative modifier");
+					return;
+				}
+
+				Debug.Log($"[MaxSpecialModifiers] Found target affix: {buffEffectAffix.ItemAffixName}");
+
+				// Check if the item already has this affix
+				bool hasTargetAffix = item.Mods?.Mods?.Any(modifierInstance =>
+					modifierInstance?.Affix?.Affix == buffEffectAffix) == true;
+
+				if (hasTargetAffix)
+				{
+					Debug.Log($"[MaxSpecialModifiers] Item already has the target affix, skipping forced addition");
+					return;
+				}
+
+				// Add the affix to the item's modifier list
+				Debug.Log($"[MaxSpecialModifiers] Adding forced affix: {buffEffectAffix.ItemAffixName}");
+				item.Mods.AddAffix(buffEffectAffix, item.Level, 1f);
+
+				Debug.Log($"[MaxSpecialModifiers] Successfully forced Keropok affix: {buffEffectAffix.ItemAffixName}");
+			}
+			catch (System.Exception ex)
+			{
+				Debug.LogError($"[MaxSpecialModifiers] Error in ForceImplicitAffixes: {ex.Message}");
+			}
 		}
 	}
 
