@@ -228,6 +228,9 @@ namespace MaxSpecialModifiers
 	{
 		// Cache reflection field for performance
 		private static readonly FieldInfo awakenedItemsField = typeof(AwakenedItemManager).GetField("awakenedItems", BindingFlags.NonPublic | BindingFlags.Instance);
+
+		// Track items we've already processed to prevent duplicate processing
+		private static readonly HashSet<int> processedItemsThisSession = new HashSet<int>();
 		/// <summary>
 		/// Controls when Keropok completion happens - only after exactly 6 non-implicit modifiers
 		/// </summary>
@@ -238,12 +241,28 @@ namespace MaxSpecialModifiers
 			try
 			{
 				Debug.Log($"[MaxSpecialModifiers] IncrementKeropokKillCount called - Item: {item?.Item?.ItemName}, Kills: {progress.NumKilled + 1}");
+				Debug.Log($"[MaxSpecialModifiers] Creature State: {creature.State} (value: {(int)creature.State}), Hunter flag: {CharacterContainerState.Hunter} (value: {(int)CharacterContainerState.Hunter})");
+				Debug.Log($"[MaxSpecialModifiers] Hunter check: {((creature.State & CharacterContainerState.Hunter) == 0)} (bitwise result: {((int)(creature.State & CharacterContainerState.Hunter))})");
 
 				if ((creature.State & CharacterContainerState.Hunter) == 0)
 				{
-					__result = false;
-					return false; // Skip original method
+					Debug.Log($"[MaxSpecialModifiers] Not a Hunter, letting original method handle it");
+					// Let original method handle non-Hunter creatures (it will return false)
+					return true; // Let original method run
 				}
+
+				// Check if we've already processed this item in this session
+				if (processedItemsThisSession.Contains(item.InstanceID))
+				{
+					Debug.Log($"[MaxSpecialModifiers] Item {item.InstanceID} already processed this session, skipping");
+					__result = false;
+					return false; // Skip to prevent duplicate processing
+				}
+
+				Debug.Log($"[MaxSpecialModifiers] Is a Hunter, processing with custom logic...");
+
+				// Mark this item as processed to prevent duplicate calls
+				processedItemsThisSession.Add(item.InstanceID);
 
 				progress.NumKilled++;
 
@@ -255,33 +274,37 @@ namespace MaxSpecialModifiers
 				int nonImplicitCount = CountNonImplicitModifiers(item.Mods, item);
 				Debug.Log($"[MaxSpecialModifiers] Current non-implicit modifiers: {nonImplicitCount}");
 
-				if (nonImplicitCount < 6)
+				if (nonImplicitCount < 5)
 				{
-					Debug.Log($"[MaxSpecialModifiers] Item has {nonImplicitCount} non-implicit modifiers (need 6), preventing Keropok completion");
+					Debug.Log($"[MaxSpecialModifiers] Item has {nonImplicitCount} non-implicit modifiers (need 5 more to reach 6 total), preventing Keropok completion");
 					// Don't add Keropok implicit yet, keep the process going
 					__result = true; // Success, but no Keropok completion
 				}
-				else if (nonImplicitCount == 6)
+				else if (nonImplicitCount == 5)
 				{
-					Debug.Log($"[MaxSpecialModifiers] Item has exactly 6 non-implicit modifiers, allowing Keropok completion");
-					// We have 6 normal affixes, now allow Keropok completion
+					Debug.Log($"[MaxSpecialModifiers] Item has exactly 5 non-implicit modifiers (6 total with existing), allowing Keropok completion");
+					// We have 5 from Keropok process + 1 existing = 6 total, now allow Keropok completion
 					if (progress.NumKilled > 5 || Helpers.PassedPercentage(chance))
 					{
 						Debug.Log($"[MaxSpecialModifiers] Keropok completion triggered! Adding implicit.");
 						item.AddOrReplaceImplicit(__instance.KeropokTags);
 						RemoveFromAwakenedItems(__instance, item.InstanceID);
+						// Remove from our tracking since the item is complete
+						processedItemsThisSession.Remove(item.InstanceID);
 					}
 					__result = true;
 				}
 				else
 				{
-					Debug.Log($"[MaxSpecialModifiers] Item has more than 6 non-implicit modifiers ({nonImplicitCount}), allowing normal completion");
-					// More than 6? Something went wrong, allow normal completion
+					Debug.Log($"[MaxSpecialModifiers] Item has more than 5 non-implicit modifiers ({nonImplicitCount}), allowing normal completion");
+					// More than 5? Something went wrong, allow normal completion
 					if (progress.NumKilled > 5 || Helpers.PassedPercentage(chance))
 					{
 						Debug.Log($"[MaxSpecialModifiers] Normal Keropok completion triggered.");
 						item.AddOrReplaceImplicit(__instance.KeropokTags);
 						RemoveFromAwakenedItems(__instance, item.InstanceID);
+						// Remove from our tracking since the item is complete
+						processedItemsThisSession.Remove(item.InstanceID);
 					}
 					__result = true;
 				}
