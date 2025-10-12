@@ -8,7 +8,7 @@ using System.Reflection;
 namespace MaxSpecialModifiers
 {
 	/// <summary>
-	/// Patch for ItemInstance.AddOrReplaceImplicit to maximize special modifier values
+	/// Patch for ItemInstance.AddOrReplaceImplicit to maximize special modifiers
 	/// </summary>
 	[HarmonyPatch(typeof(ItemInstance))]
 	public class ItemInstancePatch
@@ -18,7 +18,7 @@ namespace MaxSpecialModifiers
 		private static readonly FieldInfo upperField = typeof(ModifierInstance).GetField("upper", BindingFlags.NonPublic | BindingFlags.Instance);
 
 		/// <summary>
-		/// Postfix patch for AddOrReplaceImplicit - maximizes special modifier values after they're added
+		/// Postfix to maximize special modifiers after they are added
 		/// </summary>
 		[HarmonyPostfix]
 		[HarmonyPatch("AddOrReplaceImplicit")]
@@ -28,18 +28,13 @@ namespace MaxSpecialModifiers
 			{
 				Debug.Log($"[MaxSpecialModifiers] AddOrReplaceImplicit called with tags: {string.Join(", ", tags?.Select(t => t?.GameTagName) ?? new string[0])}");
 
-				// Check if these are special modifier tags
 				if (!IsSpecialModifierTags(tags))
 				{
-					Debug.Log($"[MaxSpecialModifiers] No special modifier tags found, skipping");
 					return;
 				}
 
-				Debug.Log($"[MaxSpecialModifiers] Processing special modifiers for tags: {string.Join(", ", tags?.Select(t => t?.GameTagName) ?? new string[0])}");
-
-				// Maximize all implicit modifiers with special tags
-				MaximizeImplicitModifiers(__instance, tags);
-
+				Debug.Log($"[MaxSpecialModifiers] Processing special modifiers for tags: {string.Join(", ", tags.Select(t => t.GameTagName))}");
+				MaximizeImplicitModifiers(__instance);
 			}
 			catch (System.Exception ex)
 			{
@@ -48,31 +43,25 @@ namespace MaxSpecialModifiers
 		}
 
 		/// <summary>
-		/// Checks if the provided tags indicate special modifiers (Keropok, Orang Bunian, Awakened)
+		/// Checks if the tags indicate special modifiers (Keropok, Orang Bunian, Awakened)
 		/// </summary>
 		private static bool IsSpecialModifierTags(GameTag[] tags)
 		{
 			if (tags == null || tags.Length == 0)
 			{
-				Debug.Log($"[MaxSpecialModifiers] IsSpecialModifierTags: tags is null or empty");
 				return false;
 			}
 
-			Debug.Log($"[MaxSpecialModifiers] IsSpecialModifierTags: checking tags: [{string.Join(", ", tags.Select(t => $"'{t?.GameTagName}'"))}]");
-
-			bool isSpecial = tags.Any(tag =>
+			return tags.Any(tag =>
 				tag?.GameTagName?.Contains("Keropok") == true ||
 				tag?.GameTagName?.Contains("Orang Bunian") == true ||
 				tag?.GameTagName?.Contains("Awakened") == true);
-
-			Debug.Log($"[MaxSpecialModifiers] IsSpecialModifierTags: result = {isSpecial}");
-			return isSpecial;
 		}
 
 		/// <summary>
-		/// Maximizes all implicit modifiers on the item that have special tags
+		/// Maximizes all implicit modifiers on the item
 		/// </summary>
-		private static void MaximizeImplicitModifiers(ItemInstance item, GameTag[] targetTags)
+		private static void MaximizeImplicitModifiers(ItemInstance item)
 		{
 			if (item?.Mods?.Mods == null)
 			{
@@ -81,241 +70,260 @@ namespace MaxSpecialModifiers
 			}
 
 			Debug.Log($"[MaxSpecialModifiers] Checking {item.Mods.Mods.Count} modifiers on item");
-			int modifiedCount = 0;
 
-			// Find all implicit modifiers with the target tags
+			int maximizedCount = 0;
 			foreach (var modifierInstance in item.Mods.Mods)
 			{
-				if (modifierInstance?.Affix?.Affix?.Tags == null)
+				if (modifierInstance?.Affix?.Affix == null)
 				{
 					Debug.Log($"[MaxSpecialModifiers] Modifier has no affix tags");
 					continue;
 				}
 
-				var modifierTags = modifierInstance.Affix.Affix.Tags.Select(t => t?.GameTagName).ToArray();
-				Debug.Log($"[MaxSpecialModifiers] Checking modifier: {modifierInstance.Modifier.Stat?.StatDisplayName}, " +
-					$"IsImplicit: {modifierInstance.IsImplicit}, Tags: [{string.Join(", ", modifierTags)}]");
+				var affix = modifierInstance.Affix.Affix;
 
-				// Check if this modifier has any of the target tags and is implicit
-				if (modifierInstance.IsImplicit &&
-					modifierInstance.Affix.Affix.Tags.Intersect(targetTags).Any())
+				// Only process implicit modifiers
+				if ((affix.Attributes & ItemModifierAttributes.Implicit) == 0)
 				{
-					// Maximize this modifier's values
-					SetModifierInstanceToMax(modifierInstance, item);
-					modifiedCount++;
-
-					Debug.Log($"[MaxSpecialModifiers] Maximized modifier: {modifierInstance.Modifier.Stat?.StatDisplayName} " +
-						$"from {modifierInstance.Lower:F2} to max value");
+					continue;
 				}
+
+				// Check if this is a special modifier
+				if (!IsSpecialModifierTags(affix.Tags))
+				{
+					continue;
+				}
+
+				Debug.Log($"[MaxSpecialModifiers] Checking modifier: {affix.ItemAffixName}, IsImplicit: {((affix.Attributes & ItemModifierAttributes.Implicit) != 0)}, Tags: [{string.Join(", ", affix.Tags?.Select(t => t?.GameTagName) ?? new string[0])}]");
+
+				SetModifierInstanceToMax(modifierInstance, item);
+				maximizedCount++;
 			}
 
-			if (modifiedCount > 0)
-			{
-				Debug.Log($"[MaxSpecialModifiers] Maximized {modifiedCount} special implicit modifiers");
-
-				// Refresh the fast lookup after modifications
-				item.Mods.RefreshFastLookup();
-			}
-			else
-			{
-				Debug.Log($"[MaxSpecialModifiers] No modifiers were maximized");
-			}
+			Debug.Log($"[MaxSpecialModifiers] Maximized {maximizedCount} special implicit modifiers");
 		}
 
 		/// <summary>
-		/// Sets a ModifierInstance to its maximum values using reflection
+		/// Sets a ModifierInstance to its maximum values
 		/// </summary>
-		private static void SetModifierInstanceToMax(ModifierInstance instance, ItemInstance item)
+		private static void SetModifierInstanceToMax(ModifierInstance modifierInstance, ItemInstance item)
 		{
-			if (instance?.Modifier == null || lowerField == null || upperField == null)
-			{
-				Debug.Log($"[MaxSpecialModifiers] SetModifierInstanceToMax: invalid instance or fields");
-				return;
-			}
-
 			try
 			{
-				var modifier = instance.Modifier;
-				float originalLower = instance.Lower;
-				float originalUpper = instance.Upper;
+				var modifier = modifierInstance.Modifier;
+				var affix = modifierInstance.Affix.Affix;
 
-				Debug.Log($"[MaxSpecialModifiers] Original values - Lower: {originalLower:F3}, Upper: {originalUpper:F3}");
+				// Get current values
+				float currentLower = (float)lowerField.GetValue(modifierInstance);
+				float currentUpper = (float)upperField.GetValue(modifierInstance);
+
+				Debug.Log($"[MaxSpecialModifiers] Original values - Lower: {currentLower:F3}, Upper: {currentUpper:F3}");
 				Debug.Log($"[MaxSpecialModifiers] Modifier properties - LowerMin: {modifier.LowerMin:F3}, LowerMax: {modifier.LowerMax:F3}, LowerPerLevel: {modifier.LowerPerLevel:F3}");
 
-				// Calculate max values accounting for level scaling and attributes
-				float maxLower = CalculateMaxLower(modifier, instance, item);
-				float maxUpper = CalculateMaxUpper(modifier, instance, item);
+				// Calculate max values
+				float maxLower = CalculateMaxLower(modifier, affix, item);
+				float maxUpper = CalculateMaxUpper(modifier, affix, item);
 
 				Debug.Log($"[MaxSpecialModifiers] Calculated max values - Lower: {maxLower:F3}, Upper: {maxUpper:F3}");
 
-				// Set the private fields using reflection
-				lowerField.SetValue(instance, maxLower);
-				upperField.SetValue(instance, maxUpper);
+				// Set the new values using reflection
+				lowerField.SetValue(modifierInstance, maxLower);
+				upperField.SetValue(modifierInstance, maxUpper);
 
 				// Verify the values were set
-				float newLower = instance.Lower;
-				float newUpper = instance.Upper;
+				float newLower = (float)lowerField.GetValue(modifierInstance);
+				float newUpper = (float)upperField.GetValue(modifierInstance);
 				Debug.Log($"[MaxSpecialModifiers] After setting - Lower: {newLower:F3}, Upper: {newUpper:F3}");
+
+				Debug.Log($"[MaxSpecialModifiers] Maximized modifier: {affix.ItemAffixName} from {currentLower:F2} to max value");
 			}
 			catch (System.Exception ex)
 			{
-				Debug.LogError($"[MaxSpecialModifiers] Error setting modifier to max: {ex.Message}");
+				Debug.LogError($"[MaxSpecialModifiers] Error maximizing modifier: {ex.Message}");
 			}
 		}
 
 		/// <summary>
 		/// Calculates the maximum lower value for a modifier
 		/// </summary>
-		private static float CalculateMaxLower(Modifier modifier, ModifierInstance instance, ItemInstance item)
+		private static float CalculateMaxLower(Modifier modifier, ItemAffix affix, ItemInstance item)
 		{
-			// Base max value
-			float maxValue = Mathf.Max(modifier.LowerMin, modifier.LowerMax);
+			float baseValue = modifier.LowerMax;
+			float levelScaling = modifier.LowerPerLevel * item.Level;
+			float totalValue = baseValue + levelScaling;
 
-			// Get the actual item level from the item that contains this modifier
-			int itemLevel = item?.Level ?? 1;
+			Debug.Log($"[MaxSpecialModifiers] CalculateMaxLower - Base: {baseValue:F3}, LowerPerLevel: {modifier.LowerPerLevel:F3}, ItemLevel: {item.Level}, Scaling: {levelScaling:F3}");
 
-			// Account for level scaling using the actual item level
-			// Handle invalid LowerPerLevel values (NaN, infinity) by defaulting to 0
-			float lowerPerLevel = float.IsNaN(modifier.LowerPerLevel) || float.IsInfinity(modifier.LowerPerLevel) ? 0f : modifier.LowerPerLevel;
-			maxValue += lowerPerLevel * itemLevel;
+			// Note: ItemAffix doesn't have a Multiplier property in this version
 
-			Debug.Log($"[MaxSpecialModifiers] CalculateMaxLower - Base: {Mathf.Max(modifier.LowerMin, modifier.LowerMax):F3}, LowerPerLevel: {lowerPerLevel:F3}, ItemLevel: {itemLevel}, Scaling: {lowerPerLevel * itemLevel:F3}");
-
-			// Apply multiplier from the affix if present
-			if (instance.Affix != null)
-			{
-				maxValue *= instance.Affix.Multiplier;
-				Debug.Log($"[MaxSpecialModifiers] Applied affix multiplier: {instance.Affix.Multiplier:F3}, Final: {maxValue:F3}");
-			}
-
-			return maxValue;
+			return totalValue;
 		}
 
 		/// <summary>
 		/// Calculates the maximum upper value for a modifier
 		/// </summary>
-		private static float CalculateMaxUpper(Modifier modifier, ModifierInstance instance, ItemInstance item)
+		private static float CalculateMaxUpper(Modifier modifier, ItemAffix affix, ItemInstance item)
 		{
-			// Base max value
-			float maxValue = Mathf.Max(modifier.UpperMin, modifier.UpperMax);
+			float baseValue = modifier.UpperMax;
+			float levelScaling = modifier.UpperPerLevel * item.Level;
+			float totalValue = baseValue + levelScaling;
 
-			// Get the actual item level from the item that contains this modifier
-			int itemLevel = item?.Level ?? 1;
+			Debug.Log($"[MaxSpecialModifiers] CalculateMaxUpper - Base: {baseValue:F3}, UpperPerLevel: {modifier.UpperPerLevel:F3}, ItemLevel: {item.Level}, Scaling: {levelScaling:F3}");
 
-			// Account for level scaling using the actual item level
-			// Handle invalid UpperPerLevel values (NaN, infinity) by defaulting to 0
-			float upperPerLevel = float.IsNaN(modifier.UpperPerLevel) || float.IsInfinity(modifier.UpperPerLevel) ? 0f : modifier.UpperPerLevel;
-			maxValue += upperPerLevel * itemLevel;
+			// Note: ItemAffix doesn't have a Multiplier property in this version
 
-			Debug.Log($"[MaxSpecialModifiers] CalculateMaxUpper - Base: {Mathf.Max(modifier.UpperMin, modifier.UpperMax):F3}, UpperPerLevel: {upperPerLevel:F3}, ItemLevel: {itemLevel}, Scaling: {upperPerLevel * itemLevel:F3}");
-
-			// Apply multiplier from the affix if present
-			if (instance.Affix != null)
-			{
-				maxValue *= instance.Affix.Multiplier;
-				Debug.Log($"[MaxSpecialModifiers] Applied affix multiplier: {instance.Affix.Multiplier:F3}, Final: {maxValue:F3}");
-			}
-
-			return maxValue;
+			return totalValue;
 		}
 	}
 
 	/// <summary>
-	/// Patch for AwakenedItemManager.IncrementKeropokKillCount to control Keropok completion timing
+	/// Patch for GiveExperience.GiveEXP to control Keropok completion timing at a higher level
 	/// </summary>
-	[HarmonyPatch(typeof(AwakenedItemManager))]
-	public class AwakenedItemManagerPatch
+	[HarmonyPatch(typeof(GiveExperience))]
+	public class GiveExperiencePatch
 	{
 		// Cache reflection field for performance
 		private static readonly FieldInfo awakenedItemsField = typeof(AwakenedItemManager).GetField("awakenedItems", BindingFlags.NonPublic | BindingFlags.Instance);
 
-		// Track items we've already processed to prevent duplicate processing
-		private static readonly HashSet<int> processedItemsThisSession = new HashSet<int>();
 		/// <summary>
-		/// Controls when Keropok completion happens - only after exactly 6 non-implicit modifiers
+		/// Controls the entire Keropok process by intercepting at the GiveEXP level
 		/// </summary>
 		[HarmonyPrefix]
-		[HarmonyPatch("IncrementKeropokKillCount")]
-		static bool Prefix(AwakenedItemManager __instance, KillQuestItemProgress progress, ItemInstance item, CharacterContainer creature, ref bool __result)
+		[HarmonyPatch("GiveEXP")]
+		static bool Prefix(CharacterContainer attacker, CharacterContainer defender)
 		{
 			try
 			{
-				Debug.Log($"[MaxSpecialModifiers] IncrementKeropokKillCount called - Item: {item?.Item?.ItemName}, Kills: {progress.NumKilled + 1}");
-				Debug.Log($"[MaxSpecialModifiers] Creature State: {creature.State} (value: {(int)creature.State}), Hunter flag: {CharacterContainerState.Hunter} (value: {(int)CharacterContainerState.Hunter})");
-				Debug.Log($"[MaxSpecialModifiers] Hunter check: {((creature.State & CharacterContainerState.Hunter) == 0)} (bitwise result: {((int)(creature.State & CharacterContainerState.Hunter))})");
+				Debug.Log($"[MaxSpecialModifiers] GiveEXP called - Attacker: {attacker?.Creature?.CreatureName}, Defender: {defender?.Creature?.CreatureName}");
+				Debug.Log($"[MaxSpecialModifiers] Defender State: {defender.State} (value: {(int)defender.State}), Hunter flag: {CharacterContainerState.Hunter} (value: {(int)CharacterContainerState.Hunter})");
+				Debug.Log($"[MaxSpecialModifiers] Hunter check: {((defender.State & CharacterContainerState.Hunter) == 0)} (bitwise result: {((int)(defender.State & CharacterContainerState.Hunter))})");
 
-				if ((creature.State & CharacterContainerState.Hunter) == 0)
+				// Always run the original GiveEXP logic first for non-Hunter creatures
+				if ((defender.State & CharacterContainerState.Hunter) == 0)
 				{
-					Debug.Log($"[MaxSpecialModifiers] Not a Hunter, letting original method handle it");
-					// Let original method handle non-Hunter creatures (it will return false)
+					Debug.Log($"[MaxSpecialModifiers] Defender is not a Hunter, letting original method run");
 					return true; // Let original method run
 				}
 
-				// Check if we've already processed this item in this session
-				if (processedItemsThisSession.Contains(item.InstanceID))
-				{
-					Debug.Log($"[MaxSpecialModifiers] Item {item.InstanceID} already processed this session, skipping");
-					__result = false;
-					return false; // Skip to prevent duplicate processing
-				}
+				Debug.Log($"[MaxSpecialModifiers] Defender is a Hunter, processing with custom logic");
 
-				Debug.Log($"[MaxSpecialModifiers] Is a Hunter, processing with custom logic...");
+				// Handle Hunter creatures with our custom logic
+				ProcessHunterKill(attacker, defender);
 
-				// Mark this item as processed to prevent duplicate calls
-				processedItemsThisSession.Add(item.InstanceID);
-
-				progress.NumKilled++;
-
-				// Let FixKeropokModifier run normally (adds normal affix)
-				float chance = item.Mods.FixKeropokModifier(item, __instance.KeropokCurseTags, progress.NumKilled);
-				Debug.Log($"[MaxSpecialModifiers] FixKeropokModifier returned chance: {chance:F3}");
-
-				// Count non-implicit modifiers (excluding Keropok-tagged affixes)
-				int nonImplicitCount = CountNonImplicitModifiers(item.Mods, item);
-				Debug.Log($"[MaxSpecialModifiers] Current non-implicit modifiers: {nonImplicitCount}");
-
-				if (nonImplicitCount < 5)
-				{
-					Debug.Log($"[MaxSpecialModifiers] Item has {nonImplicitCount} non-implicit modifiers (need 5 more to reach 6 total), preventing Keropok completion");
-					// Don't add Keropok implicit yet, keep the process going
-					__result = true; // Success, but no Keropok completion
-				}
-				else if (nonImplicitCount == 5)
-				{
-					Debug.Log($"[MaxSpecialModifiers] Item has exactly 5 non-implicit modifiers (6 total with existing), allowing Keropok completion");
-					// We have 5 from Keropok process + 1 existing = 6 total, now allow Keropok completion
-					if (progress.NumKilled > 5 || Helpers.PassedPercentage(chance))
-					{
-						Debug.Log($"[MaxSpecialModifiers] Keropok completion triggered! Adding implicit.");
-						item.AddOrReplaceImplicit(__instance.KeropokTags);
-						RemoveFromAwakenedItems(__instance, item.InstanceID);
-						// Remove from our tracking since the item is complete
-						processedItemsThisSession.Remove(item.InstanceID);
-					}
-					__result = true;
-				}
-				else
-				{
-					Debug.Log($"[MaxSpecialModifiers] Item has more than 5 non-implicit modifiers ({nonImplicitCount}), allowing normal completion");
-					// More than 5? Something went wrong, allow normal completion
-					if (progress.NumKilled > 5 || Helpers.PassedPercentage(chance))
-					{
-						Debug.Log($"[MaxSpecialModifiers] Normal Keropok completion triggered.");
-						item.AddOrReplaceImplicit(__instance.KeropokTags);
-						RemoveFromAwakenedItems(__instance, item.InstanceID);
-						// Remove from our tracking since the item is complete
-						processedItemsThisSession.Remove(item.InstanceID);
-					}
-					__result = true;
-				}
-
-				return false; // Skip original method
+				// Don't let the original method run for Hunter creatures
+				return false;
 			}
 			catch (System.Exception ex)
 			{
-				Debug.LogError($"[MaxSpecialModifiers] Error in IncrementKeropokKillCount prefix: {ex.Message}");
+				Debug.LogError($"[MaxSpecialModifiers] Error in GiveEXP prefix: {ex.Message}");
 				// Let original method run on error
 				return true;
+			}
+		}
+
+		/// <summary>
+		/// Processes a Hunter kill with our custom logic (only processes one item at a time, like the original)
+		/// </summary>
+		private static void ProcessHunterKill(CharacterContainer attacker, CharacterContainer defender)
+		{
+			try
+			{
+				// Get all worn items from the attacker
+				var inventories = attacker.Inventories;
+				if (inventories == null) return;
+
+				bool processedAnyItem = false; // Track if we've processed any Keropok item
+
+				foreach (var inventory in inventories)
+				{
+					if (!inventory.IsWorn) continue;
+
+					var items = inventory.Items;
+					if (items == null) continue;
+
+					foreach (var item in items)
+					{
+						// Give experience to the item (like the original method does)
+						item.GiveExp();
+
+						// Only process Keropok progression if we haven't processed any item yet
+						// This replicates the original behavior where only one item is processed per kill
+						if (!processedAnyItem)
+						{
+							bool itemWasProcessed = ProcessKeropokItem(item, defender);
+							if (itemWasProcessed)
+							{
+								processedAnyItem = true;
+								Debug.Log($"[MaxSpecialModifiers] Processed Keropok item, stopping processing for this kill");
+							}
+						}
+					}
+				}
+			}
+			catch (System.Exception ex)
+			{
+				Debug.LogError($"[MaxSpecialModifiers] Error processing Hunter kill: {ex.Message}");
+			}
+		}
+
+		/// <summary>
+		/// Processes a single item for Keropok progression
+		/// Returns true if the item was processed (was a Keropok item), false otherwise
+		/// </summary>
+		private static bool ProcessKeropokItem(ItemInstance item, CharacterContainer defender)
+		{
+			try
+			{
+				var awakenedItemManager = Singleton<AwakenedItemManager>.instance;
+				if (awakenedItemManager == null) return false;
+
+				// Check if this item is in the Keropok system
+				var progress = awakenedItemManager.GetAwakenedProgress(item);
+				if (progress == null)
+				{
+					return false; // Not a Keropok item
+				}
+
+				Debug.Log($"[MaxSpecialModifiers] Processing Keropok item: {item.Item?.ItemName}, Current kills: {progress.NumKilled}");
+
+				// Count current non-implicit modifiers (excluding Keropok-tagged affixes)
+				int nonImplicitCount = CountNonImplicitModifiers(item.Mods, item);
+				Debug.Log($"[MaxSpecialModifiers] Current non-implicit modifiers: {nonImplicitCount}");
+
+				// Increment kill count
+				progress.NumKilled++;
+
+				// Let FixKeropokModifier run to add a normal affix
+				float chance = item.Mods.FixKeropokModifier(item, awakenedItemManager.KeropokCurseTags, progress.NumKilled);
+				Debug.Log($"[MaxSpecialModifiers] FixKeropokModifier returned chance: {chance:F3}");
+
+				// Recount after adding the new affix
+				int newNonImplicitCount = CountNonImplicitModifiers(item.Mods, item);
+				Debug.Log($"[MaxSpecialModifiers] Non-implicit modifiers after FixKeropokModifier: {newNonImplicitCount}");
+
+				// Check if we should add the Keropok implicit
+				if (newNonImplicitCount >= 5) // 5 from Keropok process + 1 existing = 6 total
+				{
+					Debug.Log($"[MaxSpecialModifiers] Item has {newNonImplicitCount} non-implicit modifiers (6+ total), allowing Keropok completion");
+
+					if (progress.NumKilled > 5 || Helpers.PassedPercentage(chance))
+					{
+						Debug.Log($"[MaxSpecialModifiers] Keropok completion triggered! Adding implicit.");
+						item.AddOrReplaceImplicit(awakenedItemManager.KeropokTags);
+						RemoveFromAwakenedItems(awakenedItemManager, item.InstanceID);
+					}
+				}
+				else
+				{
+					Debug.Log($"[MaxSpecialModifiers] Item has {newNonImplicitCount} non-implicit modifiers (need {5 - newNonImplicitCount} more), preventing Keropok completion");
+				}
+
+				return true; // Item was processed (it was a Keropok item)
+			}
+			catch (System.Exception ex)
+			{
+				Debug.LogError($"[MaxSpecialModifiers] Error processing Keropok item: {ex.Message}");
+				return false;
 			}
 		}
 
@@ -326,7 +334,6 @@ namespace MaxSpecialModifiers
 		{
 			if (mods?.Mods == null)
 			{
-				Debug.Log($"[MaxSpecialModifiers] CountNonImplicitModifiers: No modifiers found");
 				return 0;
 			}
 
