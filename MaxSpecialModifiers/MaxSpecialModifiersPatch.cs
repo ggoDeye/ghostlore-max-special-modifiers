@@ -218,6 +218,158 @@ namespace MaxSpecialModifiers
 
 			return maxValue;
 		}
-
 	}
+
+	/// <summary>
+	/// Patch for AwakenedItemManager.IncrementKeropokKillCount to control Keropok completion timing
+	/// </summary>
+	[HarmonyPatch(typeof(AwakenedItemManager))]
+	public class AwakenedItemManagerPatch
+	{
+		// Cache reflection field for performance
+		private static readonly FieldInfo awakenedItemsField = typeof(AwakenedItemManager).GetField("awakenedItems", BindingFlags.NonPublic | BindingFlags.Instance);
+		/// <summary>
+		/// Controls when Keropok completion happens - only after exactly 6 non-implicit modifiers
+		/// </summary>
+		[HarmonyPrefix]
+		[HarmonyPatch("IncrementKeropokKillCount")]
+		static bool Prefix(AwakenedItemManager __instance, KillQuestItemProgress progress, ItemInstance item, CharacterContainer creature, ref bool __result)
+		{
+			try
+			{
+				Debug.Log($"[MaxSpecialModifiers] IncrementKeropokKillCount called - Item: {item?.Item?.ItemName}, Kills: {progress.NumKilled + 1}");
+
+				if ((creature.State & CharacterContainerState.Hunter) == 0)
+				{
+					__result = false;
+					return false; // Skip original method
+				}
+
+				progress.NumKilled++;
+
+				// Let FixKeropokModifier run normally (adds normal affix)
+				float chance = item.Mods.FixKeropokModifier(item, __instance.KeropokCurseTags, progress.NumKilled);
+				Debug.Log($"[MaxSpecialModifiers] FixKeropokModifier returned chance: {chance:F3}");
+
+				// Count non-implicit modifiers (excluding Keropok-tagged affixes)
+				int nonImplicitCount = CountNonImplicitModifiers(item.Mods, item);
+				Debug.Log($"[MaxSpecialModifiers] Current non-implicit modifiers: {nonImplicitCount}");
+
+				if (nonImplicitCount < 6)
+				{
+					Debug.Log($"[MaxSpecialModifiers] Item has {nonImplicitCount} non-implicit modifiers (need 6), preventing Keropok completion");
+					// Don't add Keropok implicit yet, keep the process going
+					__result = true; // Success, but no Keropok completion
+				}
+				else if (nonImplicitCount == 6)
+				{
+					Debug.Log($"[MaxSpecialModifiers] Item has exactly 6 non-implicit modifiers, allowing Keropok completion");
+					// We have 6 normal affixes, now allow Keropok completion
+					if (progress.NumKilled > 5 || Helpers.PassedPercentage(chance))
+					{
+						Debug.Log($"[MaxSpecialModifiers] Keropok completion triggered! Adding implicit.");
+						item.AddOrReplaceImplicit(__instance.KeropokTags);
+						RemoveFromAwakenedItems(__instance, item.InstanceID);
+					}
+					__result = true;
+				}
+				else
+				{
+					Debug.Log($"[MaxSpecialModifiers] Item has more than 6 non-implicit modifiers ({nonImplicitCount}), allowing normal completion");
+					// More than 6? Something went wrong, allow normal completion
+					if (progress.NumKilled > 5 || Helpers.PassedPercentage(chance))
+					{
+						Debug.Log($"[MaxSpecialModifiers] Normal Keropok completion triggered.");
+						item.AddOrReplaceImplicit(__instance.KeropokTags);
+						RemoveFromAwakenedItems(__instance, item.InstanceID);
+					}
+					__result = true;
+				}
+
+				return false; // Skip original method
+			}
+			catch (System.Exception ex)
+			{
+				Debug.LogError($"[MaxSpecialModifiers] Error in IncrementKeropokKillCount prefix: {ex.Message}");
+				// Let original method run on error
+				return true;
+			}
+		}
+
+		/// <summary>
+		/// Counts current modifiers that are NOT implicit (excluding Keropok-tagged affixes)
+		/// </summary>
+		private static int CountNonImplicitModifiers(ModifierList mods, ItemInstance item)
+		{
+			if (mods?.Mods == null)
+			{
+				Debug.Log($"[MaxSpecialModifiers] CountNonImplicitModifiers: No modifiers found");
+				return 0;
+			}
+
+			int count = 0;
+			foreach (var modifierInstance in mods.Mods)
+			{
+				if (modifierInstance?.Affix?.Affix == null)
+				{
+					continue;
+				}
+
+				var affix = modifierInstance.Affix.Affix;
+
+				// Skip implicit modifiers
+				if ((affix.Attributes & ItemModifierAttributes.Implicit) != 0)
+				{
+					continue;
+				}
+
+				// Skip Keropok-tagged affixes
+				if (IsKeropokAffix(affix))
+				{
+					continue;
+				}
+
+				count++;
+			}
+
+			return count;
+		}
+
+		/// <summary>
+		/// Checks if an affix is Keropok-tagged
+		/// </summary>
+		private static bool IsKeropokAffix(ItemAffix affix)
+		{
+			if (affix?.Tags == null)
+			{
+				return false;
+			}
+
+			return affix.Tags.Any(tag => tag?.GameTagName?.Contains("Keropok") == true);
+		}
+
+		/// <summary>
+		/// Removes an item from the awakenedItems list using reflection
+		/// </summary>
+		private static void RemoveFromAwakenedItems(AwakenedItemManager instance, int itemInstanceID)
+		{
+			try
+			{
+				if (awakenedItemsField != null)
+				{
+					var awakenedItems = (System.Collections.Generic.Dictionary<int, KillQuestItemProgress>)awakenedItemsField.GetValue(instance);
+					if (awakenedItems != null)
+					{
+						awakenedItems.Remove(itemInstanceID);
+						Debug.Log($"[MaxSpecialModifiers] Removed item {itemInstanceID} from awakenedItems");
+					}
+				}
+			}
+			catch (System.Exception ex)
+			{
+				Debug.LogError($"[MaxSpecialModifiers] Error removing from awakenedItems: {ex.Message}");
+			}
+		}
+	}
+
 }
