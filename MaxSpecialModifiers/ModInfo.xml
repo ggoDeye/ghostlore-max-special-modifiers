@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ModInfo xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <name>MaxSpecialModifiers</name>
+  <description>This is a template mod. Please update the description.
+
+Backup your saves before using this mod.</description>
+  <activated>false</activated>
+  <publishId>0</publishId>
+</ModInfo>
