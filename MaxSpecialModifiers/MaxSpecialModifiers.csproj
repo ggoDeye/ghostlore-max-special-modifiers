@@ -45,7 +45,7 @@
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="mkdir &quot;%25userprofile%25\appdata\locallow\ATATGames\Ghostlore\mods\MOD_NAME_PLACEHOLDER&quot;&#xD;&#xA;del &quot;%25userprofile%25\appdata\locallow\ATATGames\Ghostlore\mods\MOD_NAME_PLACEHOLDER\$(TargetFileName)&quot;&#xD;&#xA;xcopy /y &quot;$(TargetPath)&quot; &quot;%25userprofile%25\appdata\locallow\ATATGames\Ghostlore\mods\MOD_NAME_PLACEHOLDER&quot;&#xD;&#xA;xcopy /y /d &quot;$(TargetDir)ModInfo.xml&quot; &quot;%25userprofile%25\appdata\locallow\ATATGames\Ghostlore\mods\MOD_NAME_PLACEHOLDER&quot;&#xD;&#xA;xcopy /y /d &quot;$(TargetDir)0Harmony.dll&quot; &quot;%25userprofile%25\appdata\locallow\ATATGames\Ghostlore\mods\MOD_NAME_PLACEHOLDER&quot;&#xD;&#xA;xcopy  /Y /I /E &quot;$(TargetDir)Mod Folder\*.*&quot; &quot;%25userprofile%25\appdata\locallow\ATATGames\Ghostlore\mods\MOD_NAME_PLACEHOLDER&quot;" />
+    <Exec Command="mkdir &quot;%25userprofile%25\appdata\locallow\ATATGames\Ghostlore\mods\MaxSpecialModifiers&quot;&#xD;&#xA;del &quot;%25userprofile%25\appdata\locallow\ATATGames\Ghostlore\mods\MaxSpecialModifiers\$(TargetFileName)&quot;&#xD;&#xA;xcopy /y &quot;$(TargetPath)&quot; &quot;%25userprofile%25\appdata\locallow\ATATGames\Ghostlore\mods\MaxSpecialModifiers&quot;&#xD;&#xA;xcopy /y /d &quot;$(TargetDir)ModInfo.xml&quot; &quot;%25userprofile%25\appdata\locallow\ATATGames\Ghostlore\mods\MaxSpecialModifiers&quot;&#xD;&#xA;xcopy /y /d &quot;$(TargetDir)0Harmony.dll&quot; &quot;%25userprofile%25\appdata\locallow\ATATGames\Ghostlore\mods\MaxSpecialModifiers&quot;&#xD;&#xA;xcopy  /Y /I /E &quot;$(TargetDir)Mod Folder\*.*&quot; &quot;%25userprofile%25\appdata\locallow\ATATGames\Ghostlore\mods\MaxSpecialModifiers&quot;" />
   </Target>
 
 </Project>

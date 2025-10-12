@@ -3,110 +3,206 @@ using HarmonyLib;
 using System.Collections.Generic;
 using System;
 using System.Linq;
+using System.Reflection;
 
 namespace MaxSpecialModifiers
 {
 	/// <summary>
-	/// Harmony patch template for MaxSpecialModifiers.
-	/// Replace this with your actual patches.
-	/// 
-	/// Common patch patterns:
-	/// - [HarmonyPrefix] - Runs before the original method
-	/// - [HarmonyPostfix] - Runs after the original method  
-	/// - [HarmonyTranspiler] - Modifies IL code
-	/// - [HarmonyFinalizer] - Runs after method completes (even on exceptions)
+	/// Patch for ItemInstance.AddOrReplaceImplicit to maximize special modifier values
 	/// </summary>
-	[HarmonyPatch(typeof(SomeClass))]
-	public class SomeClassPatch
+	[HarmonyPatch(typeof(ItemInstance))]
+	public class ItemInstancePatch
 	{
+		// Cache reflection fields for performance
+		private static readonly FieldInfo lowerField = typeof(ModifierInstance).GetField("lower", BindingFlags.NonPublic | BindingFlags.Instance);
+		private static readonly FieldInfo upperField = typeof(ModifierInstance).GetField("upper", BindingFlags.NonPublic | BindingFlags.Instance);
+
 		/// <summary>
-		/// Prefix patch - runs before the original method
-		/// Return false to skip the original method, true to run it
+		/// Postfix patch for AddOrReplaceImplicit - maximizes special modifier values after they're added
 		/// </summary>
-		[HarmonyPrefix]
-		[HarmonyPatch("SomeMethod")]
-		static bool Prefix(SomeClass __instance)
+		[HarmonyPostfix]
+		[HarmonyPatch("AddOrReplaceImplicit")]
+		static void Postfix(ItemInstance __instance, GameTag[] tags)
 		{
 			try
 			{
-				// Check if mod is enabled
-				if (!ModLoader.Config.Enabled)
-					return true; // Let original method run if mod is disabled
+				Debug.Log($"[MaxSpecialModifiers] AddOrReplaceImplicit called with tags: {string.Join(", ", tags?.Select(t => t?.GameTagName) ?? new string[0])}");
 
-				// Log debug information if enabled
-				if (ModLoader.Config.EnableDebugLogging)
-					Debug.Log("[MaxSpecialModifiers] SomeMethod prefix called");
-				
-				// Your patch logic here
-				// Access original method parameters via __instance
-				
-				// Return false to skip original method, true to run original method
-				return true;
+				// Check if these are special modifier tags
+				if (!IsSpecialModifierTags(tags))
+				{
+					Debug.Log($"[MaxSpecialModifiers] No special modifier tags found, skipping");
+					return;
+				}
+
+				Debug.Log($"[MaxSpecialModifiers] Processing special modifiers for tags: {string.Join(", ", tags?.Select(t => t?.GameTagName) ?? new string[0])}");
+
+				// Maximize all implicit modifiers with special tags
+				MaximizeImplicitModifiers(__instance, tags);
+
 			}
 			catch (System.Exception ex)
 			{
-				Debug.LogError($"[MaxSpecialModifiers] Error in SomeMethod prefix: {ex.Message}");
-				return true; // Let original method run on error
+				Debug.LogError($"[MaxSpecialModifiers] Error in AddOrReplaceImplicit postfix: {ex.Message}");
 			}
 		}
 
 		/// <summary>
-		/// Postfix patch - runs after the original method
-		/// Useful for modifying return values or performing cleanup
+		/// Checks if the provided tags indicate special modifiers (Keropok, Orang Bunian, Awakened)
 		/// </summary>
-		[HarmonyPostfix]
-		[HarmonyPatch("SomeMethod")]
-		static void Postfix(SomeClass __instance, ref int __result)
+		private static bool IsSpecialModifierTags(GameTag[] tags)
 		{
-			try
+			if (tags == null || tags.Length == 0)
 			{
-				if (!ModLoader.Config.Enabled)
-					return;
-
-				if (ModLoader.Config.EnableDebugLogging)
-					Debug.Log($"[MaxSpecialModifiers] SomeMethod postfix called, result: {__result}");
-				
-				// Your postfix logic here
-				// Modify __result to change the return value
+				Debug.Log($"[MaxSpecialModifiers] IsSpecialModifierTags: tags is null or empty");
+				return false;
 			}
-			catch (System.Exception ex)
+
+			Debug.Log($"[MaxSpecialModifiers] IsSpecialModifierTags: checking tags: [{string.Join(", ", tags.Select(t => $"'{t?.GameTagName}'"))}]");
+
+			bool isSpecial = tags.Any(tag =>
+				tag?.GameTagName?.Contains("Keropok") == true ||
+				tag?.GameTagName?.Contains("Orang Bunian") == true ||
+				tag?.GameTagName?.Contains("Awakened") == true);
+
+			Debug.Log($"[MaxSpecialModifiers] IsSpecialModifierTags: result = {isSpecial}");
+			return isSpecial;
+		}
+
+		/// <summary>
+		/// Maximizes all implicit modifiers on the item that have special tags
+		/// </summary>
+		private static void MaximizeImplicitModifiers(ItemInstance item, GameTag[] targetTags)
+		{
+			if (item?.Mods?.Mods == null)
 			{
-				Debug.LogError($"[MaxSpecialModifiers] Error in SomeMethod postfix: {ex.Message}");
+				Debug.Log($"[MaxSpecialModifiers] No modifiers found on item");
+				return;
+			}
+
+			Debug.Log($"[MaxSpecialModifiers] Checking {item.Mods.Mods.Count} modifiers on item");
+			int modifiedCount = 0;
+
+			// Find all implicit modifiers with the target tags
+			foreach (var modifierInstance in item.Mods.Mods)
+			{
+				if (modifierInstance?.Affix?.Affix?.Tags == null)
+				{
+					Debug.Log($"[MaxSpecialModifiers] Modifier has no affix tags");
+					continue;
+				}
+
+				var modifierTags = modifierInstance.Affix.Affix.Tags.Select(t => t?.GameTagName).ToArray();
+				Debug.Log($"[MaxSpecialModifiers] Checking modifier: {modifierInstance.Modifier.Stat?.StatDisplayName}, " +
+					$"IsImplicit: {modifierInstance.IsImplicit}, Tags: [{string.Join(", ", modifierTags)}]");
+
+				// Check if this modifier has any of the target tags and is implicit
+				if (modifierInstance.IsImplicit &&
+					modifierInstance.Affix.Affix.Tags.Intersect(targetTags).Any())
+				{
+					// Maximize this modifier's values
+					SetModifierInstanceToMax(modifierInstance);
+					modifiedCount++;
+
+					Debug.Log($"[MaxSpecialModifiers] Maximized modifier: {modifierInstance.Modifier.Stat?.StatDisplayName} " +
+						$"from {modifierInstance.Lower:F2} to max value");
+				}
+			}
+
+			if (modifiedCount > 0)
+			{
+				Debug.Log($"[MaxSpecialModifiers] Maximized {modifiedCount} special implicit modifiers");
+
+				// Refresh the fast lookup after modifications
+				item.Mods.RefreshFastLookup();
+			}
+			else
+			{
+				Debug.Log($"[MaxSpecialModifiers] No modifiers were maximized");
 			}
 		}
-	}
 
-	/// <summary>
-	/// Example patch for input handling using the game's InputManager
-	/// </summary>
-	[HarmonyPatch(typeof(InputManager))]
-	public class InputManagerPatch
-	{
-		private static float lastActionTime = 0f;
-		private const float actionCooldown = 0.5f;
-
-		[HarmonyPostfix]
-		[HarmonyPatch("Update")]
-		static void Postfix()
+		/// <summary>
+		/// Sets a ModifierInstance to its maximum values using reflection
+		/// </summary>
+		private static void SetModifierInstanceToMax(ModifierInstance instance)
 		{
+			if (instance?.Modifier == null || lowerField == null || upperField == null)
+			{
+				Debug.Log($"[MaxSpecialModifiers] SetModifierInstanceToMax: invalid instance or fields");
+				return;
+			}
+
 			try
 			{
-				if (!ModLoader.Config.Enabled)
-					return;
+				var modifier = instance.Modifier;
+				float originalLower = instance.Lower;
+				float originalUpper = instance.Upper;
 
-				// Example: Check for a hotkey using the game's InputManager
-				// if (Singleton<InputManager>.instance != null && 
-				//     Singleton<InputManager>.instance.IsKeyDown(GameKey.Slot1, 0) && 
-				//     Time.time - lastActionTime > actionCooldown)
-				// {
-				//     // Perform action
-				//     lastActionTime = Time.time;
-				// }
+				Debug.Log($"[MaxSpecialModifiers] Original values - Lower: {originalLower:F3}, Upper: {originalUpper:F3}");
+				Debug.Log($"[MaxSpecialModifiers] Modifier properties - LowerMin: {modifier.LowerMin:F3}, LowerMax: {modifier.LowerMax:F3}, LowerPerLevel: {modifier.LowerPerLevel:F3}");
+
+				// Calculate max values accounting for level scaling and attributes
+				float maxLower = CalculateMaxLower(modifier, instance);
+				float maxUpper = CalculateMaxUpper(modifier, instance);
+
+				Debug.Log($"[MaxSpecialModifiers] Calculated max values - Lower: {maxLower:F3}, Upper: {maxUpper:F3}");
+
+				// Set the private fields using reflection
+				lowerField.SetValue(instance, maxLower);
+				upperField.SetValue(instance, maxUpper);
+
+				// Verify the values were set
+				float newLower = instance.Lower;
+				float newUpper = instance.Upper;
+				Debug.Log($"[MaxSpecialModifiers] After setting - Lower: {newLower:F3}, Upper: {newUpper:F3}");
 			}
 			catch (System.Exception ex)
 			{
-				Debug.LogError($"[MaxSpecialModifiers] Error in input handling: {ex.Message}");
+				Debug.LogError($"[MaxSpecialModifiers] Error setting modifier to max: {ex.Message}");
 			}
+		}
+
+		/// <summary>
+		/// Calculates the maximum lower value for a modifier
+		/// </summary>
+		private static float CalculateMaxLower(Modifier modifier, ModifierInstance instance)
+		{
+			// Base max value
+			float maxValue = Mathf.Max(modifier.LowerMin, modifier.LowerMax);
+
+			// Account for level scaling - we need to determine the item level
+			// For now, we'll use a conservative approach and assume level 1 scaling
+			// This could be improved by getting the actual item level
+			maxValue += modifier.LowerPerLevel * 1f; // Assuming level 1 for now
+
+			// Apply multiplier from the affix if present
+			if (instance.Affix != null)
+			{
+				maxValue *= instance.Affix.Multiplier;
+			}
+
+			return maxValue;
+		}
+
+		/// <summary>
+		/// Calculates the maximum upper value for a modifier
+		/// </summary>
+		private static float CalculateMaxUpper(Modifier modifier, ModifierInstance instance)
+		{
+			// Base max value
+			float maxValue = Mathf.Max(modifier.UpperMin, modifier.UpperMax);
+
+			// Account for level scaling
+			maxValue += modifier.UpperPerLevel * 1f; // Assuming level 1 for now
+
+			// Apply multiplier from the affix if present
+			if (instance.Affix != null)
+			{
+				maxValue *= instance.Affix.Multiplier;
+			}
+
+			return maxValue;
 		}
 	}
 }
