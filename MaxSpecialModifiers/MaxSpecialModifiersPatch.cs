@@ -177,227 +177,100 @@ namespace MaxSpecialModifiers
 	}
 
 	/// <summary>
-	/// Patch for GiveExperience.GiveEXP to control Keropok completion timing at a higher level
+	/// Patch for AwakenedItemManager to control Keropok completion timing
+	/// This is the most targeted approach - only affects Keropok progression, zero impact on Awakened items
 	/// </summary>
-	[HarmonyPatch(typeof(GiveExperience))]
-	public class GiveExperiencePatch
+	[HarmonyPatch(typeof(AwakenedItemManager))]
+	public class AwakenedItemManagerPatch
 	{
-		// Cache reflection field for performance
-		private static readonly FieldInfo awakenedItemsField = typeof(AwakenedItemManager).GetField("awakenedItems", BindingFlags.NonPublic | BindingFlags.Instance);
-
 		/// <summary>
-		/// Controls the entire Keropok process by intercepting at the GiveEXP level
+		/// Controls Keropok progression with our custom 6-modifier completion logic
 		/// </summary>
 		[HarmonyPrefix]
-		[HarmonyPatch("GiveEXP")]
-		static bool Prefix(CharacterContainer attacker, CharacterContainer defender)
+		[HarmonyPatch("IncrementKeropokKillCount")]
+		static bool Prefix(KillQuestItemProgress progress, ItemInstance item, CharacterContainer creature, AwakenedItemManager __instance, ref bool __result)
 		{
 			try
 			{
-				Debug.Log($"[MaxSpecialModifiers] GiveEXP called - Attacker: {attacker?.Creature?.CreatureName}, Defender: {defender?.Creature?.CreatureName}");
-				Debug.Log($"[MaxSpecialModifiers] Defender State: {defender.State} (value: {(int)defender.State}), Hunter flag: {CharacterContainerState.Hunter} (value: {(int)CharacterContainerState.Hunter})");
-				Debug.Log($"[MaxSpecialModifiers] Hunter check: {((defender.State & CharacterContainerState.Hunter) == 0)} (bitwise result: {((int)(defender.State & CharacterContainerState.Hunter))})");
+				Debug.Log($"[MaxSpecialModifiers] === IncrementKeropokKillCount CALLED ===");
+				Debug.Log($"[MaxSpecialModifiers] Item: {item.Item?.ItemName} (ID: {item.InstanceID})");
+				Debug.Log($"[MaxSpecialModifiers] Creature: {creature?.Creature?.CreatureName}");
+				Debug.Log($"[MaxSpecialModifiers] Creature State: {creature.State} (value: {(int)creature.State})");
+				Debug.Log($"[MaxSpecialModifiers] Hunter Flag: {CharacterContainerState.Hunter} (value: {(int)CharacterContainerState.Hunter})");
+				Debug.Log($"[MaxSpecialModifiers] Is Hunter: {((creature.State & CharacterContainerState.Hunter) != 0)}");
+				Debug.Log($"[MaxSpecialModifiers] Progress: NumKilled={progress.NumKilled}, QuestType={progress.QuestType}");
 
-				// Always run the original GiveEXP logic first for non-Hunter creatures
-				if ((defender.State & CharacterContainerState.Hunter) == 0)
+				// Check Hunter state (same as original)
+				if ((creature.State & CharacterContainerState.Hunter) == 0)
 				{
-					Debug.Log($"[MaxSpecialModifiers] Defender is not a Hunter, letting original method run");
-					return true; // Let original method run
+					Debug.Log($"[MaxSpecialModifiers] Creature is not a Hunter, returning false");
+					__result = false;
+					return false; // Don't let original method run
 				}
 
-				Debug.Log($"[MaxSpecialModifiers] Defender is a Hunter, processing with custom logic");
-
-				// Handle Hunter creatures with our custom logic
-				ProcessHunterKill(attacker, defender);
-
-				// Don't let the original method run for Hunter creatures
-				return false;
+				// Process with our custom logic using KeropokManager
+				Debug.Log($"[MaxSpecialModifiers] Processing with KeropokManager...");
+				__result = KeropokManager.ProcessKeropokKillCount(progress, item, creature, __instance);
+				return false; // Don't let original method run
 			}
 			catch (System.Exception ex)
 			{
-				Debug.LogError($"[MaxSpecialModifiers] Error in GiveEXP prefix: {ex.Message}");
-				// Let original method run on error
-				return true;
+				Debug.LogError($"[MaxSpecialModifiers] Error in IncrementKeropokKillCount prefix: {ex.Message}");
+				return true; // Let original method run on error
 			}
 		}
 
 		/// <summary>
-		/// Processes a Hunter kill with our custom logic (only processes one item at a time, like the original)
+		/// Logs the result after the original method runs
 		/// </summary>
-		private static void ProcessHunterKill(CharacterContainer attacker, CharacterContainer defender)
+		[HarmonyPostfix]
+		[HarmonyPatch("IncrementKeropokKillCount")]
+		static void Postfix(KillQuestItemProgress progress, ItemInstance item, CharacterContainer creature, AwakenedItemManager __instance, bool __result)
 		{
 			try
 			{
-				// Get all worn items from the attacker
-				var inventories = attacker.Inventories;
-				if (inventories == null) return;
-
-				bool processedAnyItem = false; // Track if we've processed any Keropok item
-
-				foreach (var inventory in inventories)
-				{
-					if (!inventory.IsWorn) continue;
-
-					var items = inventory.Items;
-					if (items == null) continue;
-
-					foreach (var item in items)
-					{
-						// Give experience to the item (like the original method does)
-						item.GiveExp();
-
-						// Only process Keropok progression if we haven't processed any item yet
-						// This replicates the original behavior where only one item is processed per kill
-						if (!processedAnyItem)
-						{
-							bool itemWasProcessed = ProcessKeropokItem(item, defender);
-							if (itemWasProcessed)
-							{
-								processedAnyItem = true;
-								Debug.Log($"[MaxSpecialModifiers] Processed Keropok item, stopping processing for this kill");
-							}
-						}
-					}
-				}
+				Debug.Log($"[MaxSpecialModifiers] === IncrementKeropokKillCount RESULT ===");
+				Debug.Log($"[MaxSpecialModifiers] Original method returned: {__result}");
+				Debug.Log($"[MaxSpecialModifiers] Progress after: NumKilled={progress.NumKilled}");
+				Debug.Log($"[MaxSpecialModifiers] ================================");
 			}
 			catch (System.Exception ex)
 			{
-				Debug.LogError($"[MaxSpecialModifiers] Error processing Hunter kill: {ex.Message}");
+				Debug.LogError($"[MaxSpecialModifiers] Error in IncrementKeropokKillCount postfix: {ex.Message}");
 			}
 		}
 
 		/// <summary>
-		/// Processes a single item for Keropok progression
-		/// Returns true if the item was processed (was a Keropok item), false otherwise
+		/// Logs calls to the higher-level IncrementItemKillCount method
 		/// </summary>
-		private static bool ProcessKeropokItem(ItemInstance item, CharacterContainer defender)
+		[HarmonyPrefix]
+		[HarmonyPatch("IncrementItemKillCount")]
+		static bool LogIncrementItemKillCount(ItemInstance item, CharacterContainer creature, AwakenedItemManager __instance, ref bool __result)
 		{
 			try
 			{
-				var awakenedItemManager = Singleton<AwakenedItemManager>.instance;
-				if (awakenedItemManager == null) return false;
+				Debug.Log($"[MaxSpecialModifiers] *** IncrementItemKillCount CALLED ***");
+				Debug.Log($"[MaxSpecialModifiers] Item: {item.Item?.ItemName} (ID: {item.InstanceID})");
+				Debug.Log($"[MaxSpecialModifiers] Creature: {creature?.Creature?.CreatureName}");
+				Debug.Log($"[MaxSpecialModifiers] Creature State: {creature.State} (value: {(int)creature.State})");
 
-				// Check if this item is in the Keropok system
-				var progress = awakenedItemManager.GetAwakenedProgress(item);
-				if (progress == null)
+				// Check if item has awakened progress
+				var progress = __instance.GetAwakenedProgress(item);
+				if (progress != null)
 				{
-					return false; // Not a Keropok item
-				}
-
-				Debug.Log($"[MaxSpecialModifiers] Processing Keropok item: {item.Item?.ItemName}, Current kills: {progress.NumKilled}");
-
-				// Count current non-implicit modifiers (excluding Keropok-tagged affixes)
-				int nonImplicitCount = CountNonImplicitModifiers(item.Mods, item);
-				Debug.Log($"[MaxSpecialModifiers] Current non-implicit modifiers: {nonImplicitCount}");
-
-				// Increment kill count
-				progress.NumKilled++;
-
-				// Let FixKeropokModifier run to add a normal affix
-				float chance = item.Mods.FixKeropokModifier(item, awakenedItemManager.KeropokCurseTags, progress.NumKilled);
-				Debug.Log($"[MaxSpecialModifiers] FixKeropokModifier returned chance: {chance:F3}");
-
-				// Recount after adding the new affix
-				int newNonImplicitCount = CountNonImplicitModifiers(item.Mods, item);
-				Debug.Log($"[MaxSpecialModifiers] Non-implicit modifiers after FixKeropokModifier: {newNonImplicitCount}");
-
-				// Check if we should add the Keropok implicit
-				if (newNonImplicitCount >= 5) // 5 from Keropok process + 1 existing = 6 total
-				{
-					Debug.Log($"[MaxSpecialModifiers] Item has {newNonImplicitCount} non-implicit modifiers (6+ total), allowing Keropok completion");
-
-					if (progress.NumKilled > 5 || Helpers.PassedPercentage(chance))
-					{
-						Debug.Log($"[MaxSpecialModifiers] Keropok completion triggered! Adding implicit.");
-						item.AddOrReplaceImplicit(awakenedItemManager.KeropokTags);
-						RemoveFromAwakenedItems(awakenedItemManager, item.InstanceID);
-					}
+					Debug.Log($"[MaxSpecialModifiers] Item has awakened progress: QuestType={progress.QuestType}, NumKilled={progress.NumKilled}");
 				}
 				else
 				{
-					Debug.Log($"[MaxSpecialModifiers] Item has {newNonImplicitCount} non-implicit modifiers (need {5 - newNonImplicitCount} more), preventing Keropok completion");
+					Debug.Log($"[MaxSpecialModifiers] Item has NO awakened progress");
 				}
 
-				return true; // Item was processed (it was a Keropok item)
+				return true; // Let original method run
 			}
 			catch (System.Exception ex)
 			{
-				Debug.LogError($"[MaxSpecialModifiers] Error processing Keropok item: {ex.Message}");
-				return false;
-			}
-		}
-
-		/// <summary>
-		/// Counts current modifiers that are NOT implicit (excluding Keropok-tagged affixes)
-		/// </summary>
-		private static int CountNonImplicitModifiers(ModifierList mods, ItemInstance item)
-		{
-			if (mods?.Mods == null)
-			{
-				return 0;
-			}
-
-			int count = 0;
-			foreach (var modifierInstance in mods.Mods)
-			{
-				if (modifierInstance?.Affix?.Affix == null)
-				{
-					continue;
-				}
-
-				var affix = modifierInstance.Affix.Affix;
-
-				// Skip implicit modifiers
-				if ((affix.Attributes & ItemModifierAttributes.Implicit) != 0)
-				{
-					continue;
-				}
-
-				// Skip Keropok-tagged affixes
-				if (IsKeropokAffix(affix))
-				{
-					continue;
-				}
-
-				count++;
-			}
-
-			return count;
-		}
-
-		/// <summary>
-		/// Checks if an affix is Keropok-tagged
-		/// </summary>
-		private static bool IsKeropokAffix(ItemAffix affix)
-		{
-			if (affix?.Tags == null)
-			{
-				return false;
-			}
-
-			return affix.Tags.Any(tag => tag?.GameTagName?.Contains("Keropok") == true);
-		}
-
-		/// <summary>
-		/// Removes an item from the awakenedItems list using reflection
-		/// </summary>
-		private static void RemoveFromAwakenedItems(AwakenedItemManager instance, int itemInstanceID)
-		{
-			try
-			{
-				if (awakenedItemsField != null)
-				{
-					var awakenedItems = (System.Collections.Generic.Dictionary<int, KillQuestItemProgress>)awakenedItemsField.GetValue(instance);
-					if (awakenedItems != null)
-					{
-						awakenedItems.Remove(itemInstanceID);
-						Debug.Log($"[MaxSpecialModifiers] Removed item {itemInstanceID} from awakenedItems");
-					}
-				}
-			}
-			catch (System.Exception ex)
-			{
-				Debug.LogError($"[MaxSpecialModifiers] Error removing from awakenedItems: {ex.Message}");
+				Debug.LogError($"[MaxSpecialModifiers] Error in IncrementItemKillCount prefix: {ex.Message}");
+				return true;
 			}
 		}
 	}
