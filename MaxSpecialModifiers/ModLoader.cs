@@ -1,6 +1,7 @@
 using UnityEngine;
 using HarmonyLib;
 using System.Reflection;
+using System.IO;
 
 namespace MaxSpecialModifiers
 {
@@ -11,16 +12,24 @@ namespace MaxSpecialModifiers
 	public class ModLoader : IModLoader
 	{
 		private static Harmony harmony;
+		private static string ConfigPath;
+		public static ModConfig Config;
 
 		/// <summary>
 		/// Called when mod is first loaded.
 		/// </summary>
 		public void OnCreated()
 		{
-			Debug.Log("[MaxSpecialModifiers] OnCreated() called - Applying patches...");
+			Debug.Log("[MaxSpecialModifiers] OnCreated() called - Loading configuration and applying patches...");
 
 			try
 			{
+				// Load configuration
+				ConfigPath = Path.Combine(Application.persistentDataPath, "max-special-modifiers.config.json");
+				Config = ModConfig.LoadFromFile(ConfigPath);
+
+				Debug.Log($"[MaxSpecialModifiers] Configuration loaded. Debug logging: {Config.DebugLogging}");
+
 				// Initialize Harmony for patching with error handling
 				harmony = new Harmony("com.max-special-modifiers");
 				Debug.Log("[MaxSpecialModifiers] Harmony created, applying patches...");
