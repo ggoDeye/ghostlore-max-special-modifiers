@@ -1,32 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ModInfo xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <name>MaxSpecialModifiers</name>
+  <name>Max Special Modifiers</name>
   <description>Maximize special modifier affixes on Keropok, Orang Bunian, and Awakened items with configurable forced affixes.
 
-## What This Mod Does
+[b]Not recommended for new players.[/b] This is written for seasoned players who want to experiment with their gear and avoid spending tens of hours rerolling.
+
+[h2]What This Mod Does[/h2]
 
 This mod automatically maximizes the special (implicit) affixes on items with Keropok, Orang Bunian, and Awakened tags. You can configure which specific affixes are forced onto these items, giving you control over your gear progression.
 
-## Key Features
+[h2]Key Features[/h2]
 
-- **Automatic Maximization**: All "special" modifier affixes are set to their maximum possible values
-- **Configurable Affixes**: Choose which specific affixes are forced onto your items
-- **Three Item Types Supported**: 
-  - Keropok items 
-  - Orang Bunian items
-  - Awakened items 
-- **Keropok Progression Control**: Custom maximum 6-modifiers added to food before special modifier affix is added for Keropok items
+[list]
+[*][b]Automatic Maximization[/b]: All "special" modifier affixes are set to their maximum possible values
+[*][b]Configurable Affixes[/b]: Choose which specific affixes are forced onto your items
+[*][b]Three Item Types Supported[/b]:
+[*]Keropok items
+[*]Orang Bunian items
+[*]Awakened items
+[*][b]Keropok Progression Control[/b]: Custom maximum 6-modifiers added to food before special modifier affix is added for Keropok items
+[/list]
 
-## Configuration
+[h2]Configuration[/h2]
 
 The mod creates a configuration file after being enabled at:
-`%USERPROFILE%\AppData\LocalLow\ATATGames\Ghostlore\max-special-modifiers.config.json`
+[code]%USERPROFILE%\AppData\LocalLow\ATATGames\Ghostlore\max-special-modifiers.config.json[/code]
 All changes require a restart of the game to take effect. Not just a save reload.
 
-### Simple Configuration Example
+[h3]Simple Configuration Example[/h3]
 
-```json
-{
+[code]{
   "DebugLogging": false,
   "Keropok": {
     "Increased buff effect": true,
@@ -43,32 +46,37 @@ All changes require a restart of the game to take effect. Not just a save reload
     "Cooldown Reduction": true,
     "Critical Hit Multiplier": true
   }
-}
-```
+}[/code]
 
-### How to Configure
+[h3]How to Configure[/h3]
 
-1. Start the game with the mod enabled
-2. The configuration file will be created automatically
-3. Close the game and edit the JSON file
-4. Set affixes to `true` to force them, `false` to disable them
-5. Restart the game to apply changes
+[olist]
+[*]Start the game with the mod enabled
+[*]The configuration file will be created automatically
+[*]Close the game and edit the JSON file
+[*]Set affixes to true to force them, false to disable them (don't delete)
+[*]Restart the game to apply changes
+[/olist]
 
-## Troubleshooting
+[h2]Troubleshooting[/h2]
 
-- **Affixes not appearing**: Check that the affix name matches exactly (case-sensitive). They are correct and all present in the initial file
-- **Configuration not loading**: Ensure the JSON file is valid and in the correct, original location
-- **Debug information**: Set `"DebugLogging": true` to see detailed logs in the game console
-- **If all else fails**: Delete the config file, restart the game, and try again
+[list]
+[*][b]Affixes not appearing[/b]: Check that the affix name matches exactly (case-sensitive). They are correct and all present in the initial file
+[*][b]Configuration not loading[/b]: Ensure the JSON file is valid and in the correct, original location
+[*][b]Debug information[/b]: Set [code]"DebugLogging": true[/code] to see detailed logs in the game console
+[*][b]If all else fails[/b]: Delete the config file, restart the game, and try again
+[/list]
 
-## Important Notes
+[h2]Important Notes[/h2]
 
-- Backup your saves before using this mod
-- Really, really, backup your saves before using this mod. It is new, and does a lot of things that could break your items. It's been tested, but I'm not a professional QA tester, and I'll be amazed if I don't get a bug report.
-- All affixes are enabled by default for maximum compatibility
-- The mod maintains backward compatibility with existing saves
+[list]
+[*]Backup your saves before using this mod
+[*][b]Seriously, backup your saves before using this mod.[/b] It is new and does many things that could break your items. It's been tested, but I'm not a professional QA tester, and I'll be amazed if I don't get a bug report.
+[*]All affixes are enabled by default for maximum compatibility
+[*]The mod maintains backward compatibility with existing saves
+[/list]
 
-Backup your saves before using this mod.</description>
+Source code: [url=https://github.com/ggoDeye/ghostlore-max-special-modifiers]https://github.com/ggoDeye/ghostlore-max-special-modifiers[/url]</description>
   <activated>false</activated>
   <publishId>0</publishId>
 </ModInfo>
