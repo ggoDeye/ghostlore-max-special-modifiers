@@ -36,6 +36,7 @@ namespace MaxSpecialModifiers
 			{
 				DebugLog($"[MaxSpecialModifiers] AddOrReplaceImplicit prefix called with tags: {string.Join(", ", tags?.Select(t => t?.GameTagName) ?? new string[0])}");
 				DebugLog($"[MaxSpecialModifiers] Item modifiers at start of prefix: {__instance.Mods?.Mods?.Count ?? 0}");
+				DebugLog($"[MaxSpecialModifiers] Item ID: {__instance.InstanceID}, Item Name: {__instance.Item?.ItemName}");
 
 				// Log existing affixes
 				if (__instance.Mods?.Mods != null)
@@ -59,6 +60,7 @@ namespace MaxSpecialModifiers
 					}
 
 					// Check if any tag matches our configuration
+					string matchedTagName = null;
 					bool hasConfiguredTag = false;
 					foreach (var tag in tags)
 					{
@@ -69,23 +71,39 @@ namespace MaxSpecialModifiers
 						if (ModLoader.Config?.TagConfigurations?.ContainsKey(tag.GameTagName) == true)
 						{
 							DebugLog($"[MaxSpecialModifiers] Found exact match! Tag: '{tag.GameTagName}'");
+							matchedTagName = tag.GameTagName;
 							hasConfiguredTag = true;
+							break;
 						}
-						if (hasConfiguredTag) break;
 					}
 
-					if (hasConfiguredTag)
+					if (hasConfiguredTag && !string.IsNullOrEmpty(matchedTagName))
 					{
-						DebugLog($"[MaxSpecialModifiers] Intercepting configured item, preventing original logic");
-						DebugLog($"[MaxSpecialModifiers] Item modifiers before forced affix: {__instance.Mods?.Mods?.Count ?? 0}");
+						// Check if there are any enabled affixes before intercepting
+						if (ModLoader.Config?.TagConfigurations?.TryGetValue(matchedTagName, out var tagConfig) == true &&
+							tagConfig.TryGetValue("ForcedAffixes", out var forcedAffixes))
+						{
+							var enabledAffixes = forcedAffixes.Where(kvp => kvp.Value).ToList();
+							if (enabledAffixes.Count > 0)
+							{
+								DebugLog($"[MaxSpecialModifiers] Intercepting configured item, preventing original logic");
+								DebugLog($"[MaxSpecialModifiers] Item modifiers before forced affix: {__instance.Mods?.Mods?.Count ?? 0}");
 
-						// Handle the forced affix addition ourselves
-						ForceImplicitAffixes(__instance, tags);
+								// Handle the forced affix addition ourselves
+								bool affixAdded = ForceImplicitAffixes(__instance, tags);
 
-						DebugLog($"[MaxSpecialModifiers] Item modifiers after forced affix: {__instance.Mods?.Mods?.Count ?? 0}");
+								DebugLog($"[MaxSpecialModifiers] Item modifiers after forced affix: {__instance.Mods?.Mods?.Count ?? 0}");
+								DebugLog($"[MaxSpecialModifiers] ForceImplicitAffixes returned: {affixAdded}");
 
-						// Return false to prevent the original method from running
-						return false;
+								// Return false to prevent the original method from running
+								DebugLog($"[MaxSpecialModifiers] Returning false to prevent original method");
+								return false;
+							}
+							else
+							{
+								DebugLog($"[MaxSpecialModifiers] No enabled affixes for {matchedTagName}, letting original method run");
+							}
+						}
 					}
 				}
 
@@ -118,13 +136,23 @@ namespace MaxSpecialModifiers
 
 				DebugLog($"[MaxSpecialModifiers] Processing special modifiers for tags: {string.Join(", ", tags.Select(t => t.GameTagName))}");
 
-				// For configured items, the prefix already handled the forced affix addition
-				// For other special items, handle them here if they don't have configuration
-				// Force implicit affixes if applicable (for special items without config)
-				ForceImplicitAffixes(__instance, tags);
+				// Remove any existing implicit affixes with relevant tags
+				RemoveExistingImplicitAffixes(__instance, tags);
 
-				// Always maximize implicit modifiers after any affix additions
-				MaximizeImplicitModifiers(__instance);
+				// Add our configured implicit affix
+				bool affixAdded = ForceImplicitAffixes(__instance, tags);
+
+				// Maximize it
+				if (affixAdded)
+				{
+					DebugLog($"[MaxSpecialModifiers] Affix was added, maximizing implicit modifiers in postfix");
+					MaximizeImplicitModifiers(__instance);
+				}
+				else
+				{
+					DebugLog($"[MaxSpecialModifiers] No affix was added, maximizing existing implicit modifiers in postfix");
+					MaximizeImplicitModifiers(__instance);
+				}
 			}
 			catch (System.Exception ex)
 			{
@@ -267,8 +295,9 @@ namespace MaxSpecialModifiers
 
 		/// <summary>
 		/// Forces implicit affixes based on configuration for the given tags
+		/// Returns true if an affix was successfully added, false otherwise
 		/// </summary>
-		private static void ForceImplicitAffixes(ItemInstance item, GameTag[] tags)
+		private static bool ForceImplicitAffixes(ItemInstance item, GameTag[] tags)
 		{
 			try
 			{
@@ -305,7 +334,7 @@ namespace MaxSpecialModifiers
 				if (tagConfig == null || !tagConfig.TryGetValue("ForcedAffixes", out var forcedAffixes))
 				{
 					DebugLog($"[MaxSpecialModifiers] No enabled configuration found for tags: {string.Join(", ", tags.Select(t => t?.GameTagName))}");
-					return;
+					return false;
 				}
 
 				DebugLog($"[MaxSpecialModifiers] Forcing affixes for {matchedTagName} item: {item.Item?.ItemName}");
@@ -315,7 +344,7 @@ namespace MaxSpecialModifiers
 				if (itemManager == null)
 				{
 					Debug.LogError($"[MaxSpecialModifiers] ItemManager instance is null");
-					return;
+					return false;
 				}
 
 				// Access the affixes pool through reflection since it's private
@@ -323,67 +352,135 @@ namespace MaxSpecialModifiers
 				if (affixesPoolField == null)
 				{
 					Debug.LogError($"[MaxSpecialModifiers] Could not find affixesPool field in ItemManager");
-					return;
+					return false;
 				}
 
 				var allAffixes = (ItemAffix[])affixesPoolField.GetValue(itemManager);
 				if (allAffixes == null)
 				{
 					Debug.LogError($"[MaxSpecialModifiers] affixesPool is null");
-					return;
+					return false;
 				}
 
-				// Process each configured forced affix
-				foreach (var affixEntry in forcedAffixes)
+				// Get list of enabled affixes
+				var enabledAffixes = forcedAffixes.Where(kvp => kvp.Value).ToList();
+				if (enabledAffixes.Count == 0)
 				{
-					var affixName = affixEntry.Key;
-					var affixEnabled = affixEntry.Value;
-
-					if (!affixEnabled)
-					{
-						continue;
-					}
-
-					// Get exact ItemAffixName from static mapping
-					var exactAffixName = ModConfig.GetAffixName(affixName);
-					if (string.IsNullOrEmpty(exactAffixName))
-					{
-						DebugLog($"[MaxSpecialModifiers] Could not find mapping for affix: {affixName}");
-						continue;
-					}
-
-					// Find the affix by exact name
-					var targetAffix = FindAffixByName(allAffixes, exactAffixName);
-					if (targetAffix == null)
-					{
-						DebugLog($"[MaxSpecialModifiers] Could not find affix with name: {exactAffixName}");
-						continue;
-					}
-
-					// Check if the item already has this affix
-					bool hasTargetAffix = item.Mods?.Mods?.Any(modifierInstance =>
-						modifierInstance?.Affix?.Affix == targetAffix) == true;
-
-					if (hasTargetAffix)
-					{
-						DebugLog($"[MaxSpecialModifiers] Item already has the target affix {affixName}, skipping");
-						continue;
-					}
-
-					// Add the affix to the item's modifier list
-					DebugLog($"[MaxSpecialModifiers] Adding forced affix: {affixName} ({targetAffix.ItemAffixName})");
-					item.Mods.AddAffix(targetAffix, item.Level, 1f);
+					DebugLog($"[MaxSpecialModifiers] No enabled affixes found for {matchedTagName}");
+					return false;
 				}
+
+				// Randomly select one enabled affix
+				var random = new System.Random();
+				var selectedAffix = enabledAffixes[random.Next(enabledAffixes.Count)];
+				var affixName = selectedAffix.Key;
+
+				DebugLog($"[MaxSpecialModifiers] Randomly selected affix: {affixName} from {enabledAffixes.Count} enabled affixes");
+
+				// Get exact ItemAffixName from static mapping
+				var exactAffixName = ModConfig.GetAffixName(affixName);
+				if (string.IsNullOrEmpty(exactAffixName))
+				{
+					DebugLog($"[MaxSpecialModifiers] Could not find mapping for affix: {affixName}");
+					return false;
+				}
+
+				// Find the affix by exact name
+				var targetAffix = FindAffixByName(allAffixes, exactAffixName);
+				if (targetAffix == null)
+				{
+					DebugLog($"[MaxSpecialModifiers] Could not find affix with name: {exactAffixName}");
+					return false;
+				}
+
+				// Check if the item already has this affix
+				bool hasTargetAffix = item.Mods?.Mods?.Any(modifierInstance =>
+					modifierInstance?.Affix?.Affix == targetAffix) == true;
+
+				if (hasTargetAffix)
+				{
+					DebugLog($"[MaxSpecialModifiers] Item already has the target affix {affixName}, skipping");
+					return false;
+				}
+
+				// Add the affix to the item's modifier list
+				DebugLog($"[MaxSpecialModifiers] Adding forced affix: {affixName} ({targetAffix.ItemAffixName})");
+				item.Mods.AddAffix(targetAffix, item.Level, 1f);
 
 				// Maximize the newly added affixes
 				DebugLog($"[MaxSpecialModifiers] Maximizing forced affixes");
 				MaximizeImplicitModifiers(item);
 
 				DebugLog($"[MaxSpecialModifiers] Successfully forced and maximized affixes for {matchedTagName}");
+				return true;
 			}
 			catch (System.Exception ex)
 			{
 				Debug.LogError($"[MaxSpecialModifiers] Error in ForceImplicitAffixes: {ex.Message}");
+				return false;
+			}
+		}
+
+		/// <summary>
+		/// Removes any existing implicit affixes with the given tags
+		/// </summary>
+		private static void RemoveExistingImplicitAffixes(ItemInstance item, GameTag[] tags)
+		{
+			if (item?.Mods?.Mods == null || tags == null)
+			{
+				return;
+			}
+
+			var modifiersToRemove = new List<ModifierInstance>();
+
+			foreach (var modifierInstance in item.Mods.Mods)
+			{
+				if (modifierInstance?.Affix?.Affix == null)
+				{
+					continue;
+				}
+
+				var affix = modifierInstance.Affix.Affix;
+
+				// Only check implicit modifiers
+				if ((affix.Attributes & ItemModifierAttributes.Implicit) == 0)
+				{
+					continue;
+				}
+
+				// Check if this affix has any of the relevant tags
+				if (affix.Tags != null)
+				{
+					foreach (var affixTag in affix.Tags)
+					{
+						if (affixTag?.GameTagName == null) continue;
+
+						foreach (var itemTag in tags)
+						{
+							if (itemTag?.GameTagName == null) continue;
+
+							// Check for exact match or if the affix tag contains the item tag
+							if (affixTag.GameTagName == itemTag.GameTagName ||
+								affixTag.GameTagName.Contains(itemTag.GameTagName))
+							{
+								DebugLog($"[MaxSpecialModifiers] Removing existing implicit affix: {affix.ItemAffixName} (tag: {affixTag.GameTagName})");
+								modifiersToRemove.Add(modifierInstance);
+								break;
+							}
+						}
+					}
+				}
+			}
+
+			// Remove the identified modifiers
+			foreach (var modifier in modifiersToRemove)
+			{
+				item.Mods.Mods.Remove(modifier);
+			}
+
+			if (modifiersToRemove.Count > 0)
+			{
+				DebugLog($"[MaxSpecialModifiers] Removed {modifiersToRemove.Count} existing implicit affixes");
 			}
 		}
 
