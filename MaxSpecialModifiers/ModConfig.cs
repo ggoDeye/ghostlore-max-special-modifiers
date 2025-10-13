@@ -16,87 +16,90 @@ namespace MaxSpecialModifiers
 		public bool DebugLogging { get; set; } = false;
 
 		/// <summary>
-		/// Configuration for tag-specific forced affixes - simplified structure
+		/// Indicates if the configuration was loaded successfully or if we're using fallback behavior
 		/// </summary>
-		public Dictionary<string, Dictionary<string, Dictionary<string, bool>>> TagConfigurations { get; set; } = new Dictionary<string, Dictionary<string, Dictionary<string, bool>>>
+		public bool IsConfigurationValid { get; set; } = true;
+
+		private static void DebugLog(string message)
 		{
-			["Keropok"] = new Dictionary<string, Dictionary<string, bool>>
+			if (ModLoader.Config?.DebugLogging == true)
 			{
-				["ForcedAffixes"] = new Dictionary<string, bool>
-				{
-					["Increased buff effect"] = true,
-					["Increased buff duration"] = true,
-					["HP Regen"] = true,
-					["Damage Reflection"] = true,
-					["Elemental Resistance"] = true,
-					["Class Passives Multiplier"] = true,
-					["HP Steal"] = true,
-					["MP Steal"] = true,
-					["Crisis Threshold"] = true,
-					["Crisis Absorb"] = true,
-					["Max HP"] = true,
-					["Cold Chance Defense"] = true,
-					["Movement Speed"] = true
-				}
-			},
-			["Orang Bunian"] = new Dictionary<string, Dictionary<string, bool>>
-			{
-				["ForcedAffixes"] = new Dictionary<string, bool>
-				{
-					["Additional Minions"] = true,
-					["Minion Max HP"] = true,
-					["HP Multiplier"] = true,
-					["Max Skill Uses"] = true,
-					["Increased Movement Speed"] = true,
-					["Elemental Chance"] = true,
-					["Absorb"] = true,
-					["Increased Projectile Radius"] = true,
-					["Basic attack as fire"] = true,
-					["Basic attack as ice"] = true,
-					["Fire penetration"] = true,
-					["Ice penetration"] = true,
-					["Blind on hit"] = true,
-					["Slow on hit"] = true,
-					["Fire Resistance Cap"] = true,
-					["Ice Resistance Cap"] = true,
-					["Attack Damage"] = true,
-					["Class Passives Multiplier"] = true,
-					["Faster cooldown less cast speed"] = true,
-					["Triggered skills reduced cooldown and damage multiplier"] = true,
-					["Triggered skills increased damage"] = true,
-					["Crisis Damage"] = true,
-					["Blessed Minion Movement Speed"] = true
-				}
-			},
-			["Awakened"] = new Dictionary<string, Dictionary<string, bool>>
-			{
-				["ForcedAffixes"] = new Dictionary<string, bool>
-				{
-					["Minion Damage"] = true,
-					["Minion Avoidance"] = true,
-					["MP Multiplier"] = true,
-					["Cooldown Reduction"] = true,
-					["Elemental Multiplier"] = true,
-					["Elemental Resistance"] = true,
-					["Projectile Speed"] = true,
-					["Armour Break"] = true,
-					["Basic attack as lightning"] = true,
-					["Basic attack as poison"] = true,
-					["Lightning penetration"] = true,
-					["Poison penetration"] = true,
-					["Frenzy on hit"] = true,
-					["Agility on hit"] = true,
-					["Lightning Resistance Cap"] = true,
-					["Poison Resistance Cap"] = true,
-					["Skill Damage"] = true,
-					["Critical Hit Multiplier"] = true,
-					["Crisis Threshold"] = true,
-					["Triggered Chance No Charge Use"] = true,
-					["Triggered Skill Speed"] = true,
-					["Crisis Absorb"] = true,
-					["Movement Skill Distance Multiplier"] = true
-				}
+				Debug.Log($"[MaxSpecialModifiers] {message}");
 			}
+		}
+
+		/// <summary>
+		/// Configuration for Keropok forced affixes
+		/// </summary>
+		public Dictionary<string, bool> Keropok { get; set; } = new Dictionary<string, bool>
+		{
+			["Increased buff effect"] = true,
+			["Increased buff duration"] = true,
+			["HP Regen"] = true,
+			["Damage Reflection"] = true,
+			["Elemental Resistance"] = true,
+			["Class Passives Multiplier"] = true,
+			["HP Steal"] = true,
+			["MP Steal"] = true,
+			["Crisis Threshold"] = true,
+			["Crisis Absorb"] = true,
+			["Max HP"] = true,
+			["Cold Chance Defense"] = true,
+			["Movement Speed"] = true
+		};
+
+		/// <summary>
+		/// Configuration for Orang Bunian forced affixes
+		/// </summary>
+		public Dictionary<string, bool> OrangBunian { get; set; } = new Dictionary<string, bool>
+		{
+			["Additional Minions"] = true,
+			["Minion Max HP"] = true,
+			["HP Multiplier"] = true,
+			["Max Skill Uses"] = true,
+			["Increased Movement Speed"] = true,
+			["Elemental Chance"] = true,
+			["Absorb"] = true,
+			["Increased Projectile Radius"] = true,
+			["Basic attack as fire"] = true,
+			["Basic attack as ice"] = true,
+			["Fire penetration"] = true,
+			["Ice penetration"] = true,
+			["Blind on hit"] = true,
+			["Slow on hit"] = true,
+			["Fire Resistance Cap"] = true,
+			["Ice Resistance Cap"] = true,
+			["Attack Damage"] = true
+		};
+
+		/// <summary>
+		/// Configuration for Awakened forced affixes
+		/// </summary>
+		public Dictionary<string, bool> Awakened { get; set; } = new Dictionary<string, bool>
+		{
+			["Minion Damage"] = true,
+			["Minion Avoidance"] = true,
+			["MP Multiplier"] = true,
+			["Cooldown Reduction"] = true,
+			["Elemental Multiplier"] = true,
+			["Elemental Resistance"] = true,
+			["Projectile Speed"] = true,
+			["Armour Break"] = true,
+			["Basic attack as lightning"] = true,
+			["Basic attack as poison"] = true,
+			["Lightning penetration"] = true,
+			["Poison penetration"] = true,
+			["Frenzy on hit"] = true,
+			["Agility on hit"] = true,
+			["Lightning Resistance Cap"] = true,
+			["Poison Resistance Cap"] = true,
+			["Skill Damage"] = true,
+			["Critical Hit Multiplier"] = true,
+			["Crisis Threshold"] = true,
+			["Triggered Chance No Charge Use"] = true,
+			["Triggered Skill Speed"] = true,
+			["Crisis Absorb"] = true,
+			["Movement Skill Distance Multiplier"] = true
 		};
 
 		/// <summary>
@@ -188,7 +191,7 @@ namespace MaxSpecialModifiers
 			{
 				string json = JsonConvert.SerializeObject(this, Formatting.Indented);
 				File.WriteAllText(filePath, json);
-				Debug.Log($"[MaxSpecialModifiers] Configuration saved to {filePath}");
+				DebugLog($"Configuration saved to {filePath}");
 			}
 			catch (System.Exception ex)
 			{
@@ -207,13 +210,15 @@ namespace MaxSpecialModifiers
 				{
 					string json = File.ReadAllText(filePath);
 					var config = JsonConvert.DeserializeObject<ModConfig>(json);
-					Debug.Log($"[MaxSpecialModifiers] Configuration loaded from {filePath}");
+					config.IsConfigurationValid = true;
+					DebugLog($"Configuration loaded from {filePath}");
 					return config;
 				}
 				else
 				{
-					Debug.Log($"[MaxSpecialModifiers] Configuration file not found, creating default at {filePath}");
+					DebugLog($"Configuration file not found, creating default at {filePath}");
 					var defaultConfig = new ModConfig();
+					defaultConfig.IsConfigurationValid = true;
 					defaultConfig.SaveToFile(filePath);
 					return defaultConfig;
 				}
@@ -221,8 +226,10 @@ namespace MaxSpecialModifiers
 			catch (System.Exception ex)
 			{
 				Debug.LogError($"[MaxSpecialModifiers] Error loading configuration: {ex.Message}");
-				Debug.LogError($"[MaxSpecialModifiers] Using default configuration");
-				return new ModConfig();
+				Debug.LogError($"[MaxSpecialModifiers] Using fallback configuration - mod will use original game behavior");
+				var fallbackConfig = new ModConfig();
+				fallbackConfig.IsConfigurationValid = false;
+				return fallbackConfig;
 			}
 		}
 	}

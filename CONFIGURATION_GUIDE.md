@@ -1,8 +1,18 @@
-# MaxSpecialModifiers Configuration Guide
+# MaxSpecialModifiers - User Guide
 
-## Overview
+## What This Mod Does
 
-The mod now supports a modular configuration system that allows you to configure which implicit affixes are forced for different item tag types (Keropok, Orang Bunian, Awakened, etc.).
+This mod automatically maximizes the special implicit affixes on items with Keropok, Orang Bunian, and Awakened tags. You can configure which specific affixes are forced onto these items, giving you control over your gear progression.
+
+## Key Features
+
+- **Automatic Maximization**: All special modifier affixes are set to their maximum possible values
+- **Configurable Affixes**: Choose which specific affixes are forced onto your items
+- **Three Item Types Supported**:
+  - Keropok items (13 available affixes)
+  - Orang Bunian items (17 available affixes)
+  - Awakened items (22 available affixes)
+- **Keropok Progression Control**: Custom 6-modifier completion system for Keropok items
 
 ## Configuration File Location
 
@@ -17,72 +27,64 @@ The configuration file is automatically created at:
 ```json
 {
   "DebugLogging": false,
-  "TagConfigurations": {
-    "Keropok": {
-      "ForcedAffixes": {
-        "Increased buff effect": true,
-        "Increased buff duration": true,
-        "HP Regen": true,
-        "Damage Reflection": true,
-        "Elemental Resistance": true,
-        "Class Passives Multiplier": true,
-        "HP Steal": true,
-        "MP Steal": true,
-        "Crisis Threshold": true,
-        "Crisis Absorb": true,
-        "Max HP": true,
-        "Cold Chance Defense": true,
-        "Movement Speed": true
-      }
-    },
-    "Orang Bunian": {
-      "ForcedAffixes": {
-        "Additional Minions": true,
-        "Minion Max HP": true,
-        "HP Multiplier": true,
-        "Max Skill Uses": true,
-        "Increased Movement Speed": true,
-        "Elemental Chance": true,
-        "Absorb": true,
-        "Increased Projectile Radius": true,
-        "Basic attack as fire": true,
-        "Basic attack as ice": true,
-        "Fire penetration": true,
-        "Ice penetration": true,
-        "Blind on hit": true,
-        "Slow on hit": true,
-        "Fire Resistance Cap": true,
-        "Ice Resistance Cap": true,
-        "Attack Damage": true
-      }
-    },
-    "Awakened": {
-      "ForcedAffixes": {
-        "Minion Damage": true,
-        "Minion Avoidance": true,
-        "MP Multiplier": true,
-        "Cooldown Reduction": true,
-        "Elemental Multiplier": true,
-        "Elemental Resistance": true,
-        "Projectile Speed": true,
-        "Armour Break": true,
-        "Basic attack as lightning": true,
-        "Basic attack as poison": true,
-        "Lightning penetration": true,
-        "Poison penetration": true,
-        "Frenzy on hit": true,
-        "Agility on hit": true,
-        "Lightning Resistance Cap": true,
-        "Poison Resistance Cap": true,
-        "Skill Damage": true,
-        "Critical Hit Multiplier": true,
-        "Crisis Threshold": true,
-        "Triggered Chance No Charge Use": true,
-        "Triggered Skill Speed": true,
-        "Crisis Absorb": true,
-        "Movement Skill Distance Multiplier": true
-      }
-    }
+  "Keropok": {
+    "Increased buff effect": true,
+    "Increased buff duration": true,
+    "HP Regen": true,
+    "Damage Reflection": true,
+    "Elemental Resistance": true,
+    "Class Passives Multiplier": true,
+    "HP Steal": true,
+    "MP Steal": true,
+    "Crisis Threshold": true,
+    "Crisis Absorb": true,
+    "Max HP": true,
+    "Cold Chance Defense": true,
+    "Movement Speed": true
+  },
+  "OrangBunian": {
+    "Additional Minions": true,
+    "Minion Max HP": true,
+    "HP Multiplier": true,
+    "Max Skill Uses": true,
+    "Increased Movement Speed": true,
+    "Elemental Chance": true,
+    "Absorb": true,
+    "Increased Projectile Radius": true,
+    "Basic attack as fire": true,
+    "Basic attack as ice": true,
+    "Fire penetration": true,
+    "Ice penetration": true,
+    "Blind on hit": true,
+    "Slow on hit": true,
+    "Fire Resistance Cap": true,
+    "Ice Resistance Cap": true,
+    "Attack Damage": true
+  },
+  "Awakened": {
+    "Minion Damage": true,
+    "Minion Avoidance": true,
+    "MP Multiplier": true,
+    "Cooldown Reduction": true,
+    "Elemental Multiplier": true,
+    "Elemental Resistance": true,
+    "Projectile Speed": true,
+    "Armour Break": true,
+    "Basic attack as lightning": true,
+    "Basic attack as poison": true,
+    "Lightning penetration": true,
+    "Poison penetration": true,
+    "Frenzy on hit": true,
+    "Agility on hit": true,
+    "Lightning Resistance Cap": true,
+    "Poison Resistance Cap": true,
+    "Skill Damage": true,
+    "Critical Hit Multiplier": true,
+    "Crisis Threshold": true,
+    "Triggered Chance No Charge Use": true,
+    "Triggered Skill Speed": true,
+    "Crisis Absorb": true,
+    "Movement Skill Distance Multiplier": true
   }
 }
 ```
@@ -93,20 +95,14 @@ The configuration file is automatically created at:
 
 - **`DebugLogging`** (boolean): Enable detailed debug logging for troubleshooting
 
-### Tag Configuration
-
-Each tag type (Keropok, Orang Bunian, Awakened, etc.) contains:
-
-- **`ForcedAffixes`** (object): Dictionary of affixes to force for this tag type
-
 ### Affix Configuration
 
-Each affix is configured with a simple boolean value:
+Each affix is configured with a simple true/false value:
 
 - **`true`**: Force this affix to be applied to items with this tag
 - **`false`**: Do not force this affix (item may get random affixes instead)
 
-**Note**: StatID and Multiplicative requirements are handled automatically by the mod - users don't need to worry about these technical details!
+**Note**: All technical requirements are handled automatically by the mod!
 
 ## How to Configure
 
@@ -133,15 +129,11 @@ Each affix is configured with a simple boolean value:
 
 ```json
 {
-  "TagConfigurations": {
-    "Orang Bunian": {
-      "ForcedAffixes": {
-        "Additional Minions": true,
-        "Minion Max HP": true,
-        "HP Multiplier": true,
-        "Max Skill Uses": true
-      }
-    }
+  "OrangBunian": {
+    "Additional Minions": true,
+    "Minion Max HP": true,
+    "HP Multiplier": true,
+    "Max Skill Uses": true
   }
 }
 ```
@@ -150,15 +142,11 @@ Each affix is configured with a simple boolean value:
 
 ```json
 {
-  "TagConfigurations": {
-    "Keropok": {
-      "ForcedAffixes": {
-        "Increased buff effect": true,
-        "HP Regen": true,
-        "MP Steal": true,
-        "Movement Speed": true
-      }
-    }
+  "Keropok": {
+    "Increased buff effect": true,
+    "HP Regen": true,
+    "MP Steal": true,
+    "Movement Speed": true
   }
 }
 ```
@@ -167,15 +155,11 @@ Each affix is configured with a simple boolean value:
 
 ```json
 {
-  "TagConfigurations": {
-    "Keropok": {
-      "ForcedAffixes": {
-        "Increased buff effect": false,
-        "Damage Reflection": true,
-        "HP Steal": false,
-        "Movement Speed": true
-      }
-    }
+  "Keropok": {
+    "Increased buff effect": false,
+    "Damage Reflection": true,
+    "HP Steal": false,
+    "Movement Speed": true
   }
 }
 ```
@@ -184,41 +168,35 @@ Each affix is configured with a simple boolean value:
 
 ```json
 {
-  "TagConfigurations": {
-    "Awakened": {
-      "ForcedAffixes": {
-        "Minion Damage": true,
-        "Minion Avoidance": true,
-        "MP Multiplier": true,
-        "Cooldown Reduction": true,
-        "Elemental Multiplier": true,
-        "Elemental Resistance": true,
-        "Projectile Speed": true,
-        "Armour Break": true,
-        "Basic attack as lightning": true,
-        "Basic attack as poison": true,
-        "Lightning penetration": true,
-        "Poison penetration": true,
-        "Frenzy on hit": true,
-        "Agility on hit": true,
-        "Lightning Resistance Cap": true,
-        "Poison Resistance Cap": true,
-        "Skill Damage": true,
-        "Critical Hit Multiplier": true,
-        "Crisis Threshold": true,
-        "Triggered Chance No Charge Use": true,
-        "Triggered Skill Speed": true,
-        "Crisis Absorb": true,
-        "Movement Skill Distance Multiplier": true
-      }
-    }
+  "Awakened": {
+    "Minion Damage": true,
+    "Minion Avoidance": true,
+    "MP Multiplier": true,
+    "Cooldown Reduction": true,
+    "Elemental Multiplier": true,
+    "Elemental Resistance": true,
+    "Projectile Speed": true,
+    "Armour Break": true,
+    "Basic attack as lightning": true,
+    "Basic attack as poison": true,
+    "Lightning penetration": true,
+    "Poison penetration": true,
+    "Frenzy on hit": true,
+    "Agility on hit": true,
+    "Lightning Resistance Cap": true,
+    "Poison Resistance Cap": true,
+    "Skill Damage": true,
+    "Critical Hit Multiplier": true,
+    "Crisis Threshold": true,
+    "Triggered Chance No Charge Use": true,
+    "Triggered Skill Speed": true,
+    "Crisis Absorb": true,
+    "Movement Skill Distance Multiplier": true
   }
 }
 ```
 
 ## Available Affixes
-
-The mod includes all possible implicit affixes for each tag type. Here are the complete lists:
 
 ### Keropok Affixes (13 total)
 
@@ -242,8 +220,6 @@ The mod includes all possible implicit affixes for each tag type. Here are the c
 - Skill Damage, Critical Hit Multiplier, Crisis Threshold, Triggered Chance No Charge Use
 - Triggered Skill Speed, Crisis Absorb, Movement Skill Distance Multiplier
 
-**Note**: All StatID mappings and Multiplicative requirements are handled automatically by the mod.
-
 ## Troubleshooting
 
 ### Configuration Not Loading
@@ -254,8 +230,8 @@ The mod includes all possible implicit affixes for each tag type. Here are the c
 
 ### Affixes Not Being Forced
 
-- Verify `Enabled: true` for both the tag configuration and specific affix
-- Check that the `StatID` matches exactly
+- Verify the affix is set to `true` in the configuration
+- Check that the affix name matches exactly (case-sensitive)
 - Enable `DebugLogging: true` to see detailed information
 - Ensure the item has the correct tag
 
@@ -267,20 +243,10 @@ Enable `DebugLogging: true` to see detailed information about:
 - Which affixes are being found/not found
 - When affixes are being added to items
 
-## Future Enhancements
+## Important Notes
 
-The configuration system is designed to be extensible. Future versions may include:
-
-- Unity UI for in-game configuration
-- Preset configurations for different playstyles
-- Import/export functionality for sharing configurations
-- Additional tag types beyond Keropok, Orang Bunian, and Awakened
-
-## Backward Compatibility
-
-The mod maintains backward compatibility:
-
+- **Backup your saves** before using this mod
+- All affixes are enabled by default for maximum compatibility
+- The mod maintains backward compatibility with existing saves
 - If no configuration file exists, default settings are used (all affixes enabled)
 - If the configuration file is invalid, default settings are used
-- The original Keropok behavior is preserved by default
-- StatID and Multiplicative requirements are handled automatically

@@ -1,119 +1,210 @@
-# Max Special Modifiers
+# MaxSpecialModifiers
 
-This mod maximizes special modifier values (Keropok, Orang Bunian, Awakened) to their maximum values and allows configuration of which implicit affixes are available for each tag type.
+A Ghostlore mod that maximizes special modifier values (Keropok, Orang Bunian, Awakened) to their maximum values and provides configurable forced affix selection for each tag type.
 
-## Features
+## Architecture Overview
 
-1. **Maximizes Special Modifiers**: All implicit modifiers from Keropok, Orang Bunian, and Awakened sources are automatically set to their maximum values.
+This mod uses Harmony patching to intercept and modify the item affix system in Ghostlore. It operates at the `ItemInstance.AddOrReplaceImplicit` level to control which affixes are applied and maximize their values.
 
-2. **Configurable Implicit Selection**: Choose which implicit affixes are available for each tag type through a JSON configuration file.
+## Core Features
 
-3. **Keropok System Control**: Ensures Keropok food items get exactly 6 non-implicit modifiers before the Keropok implicit is added.
+1. **Automatic Maximization**: All implicit modifiers from Keropok, Orang Bunian, and Awakened sources are automatically set to their maximum values using reflection to access private modifier fields.
 
-## Configuration
+2. **Configurable Forced Affixes**: Choose which specific affixes are forced onto items through a simplified JSON configuration structure.
 
-The mod creates a configuration file at: `%USERPROFILE%\AppData\LocalLow\ATATGames\Ghostlore\Mods\MaxSpecialModifiers\config.json`
+3. **Keropok Progression Control**: Custom 6-modifier completion system that ensures Keropok food items get exactly 6 non-implicit modifiers before the Keropok implicit is added.
 
-### Configuration Structure
+4. **Tag-Based Affix Selection**: Supports three distinct item tag types with separate affix pools and configuration.
+
+## Technical Implementation
+
+### Configuration System
+
+The mod creates a configuration file at: `%USERPROFILE%\AppData\LocalLow\ATATGames\Ghostlore\max-special-modifiers.config.json`
+
+#### Configuration Structure (Simplified)
 
 ```json
 {
+  "DebugLogging": false,
   "Keropok": {
     "Increased buff effect": true,
-    "Increased buff duration": false,
-    "HP Regen": false,
-    "Damage Reflection": false,
-    "Elemental Resistance": false,
-    "Class Passives Multiplier": false,
-    "HP Steal": false,
-    "MP Steal": false,
-    "Crisis Threshold": false,
-    "Crisis Absorb": false,
-    "Max HP": false,
-    "Cold Chance Defense": false,
-    "Movement Speed": false
+    "Increased buff duration": true,
+    "HP Regen": true,
+    "Damage Reflection": true,
+    "Elemental Resistance": true,
+    "Class Passives Multiplier": true,
+    "HP Steal": true,
+    "MP Steal": true,
+    "Crisis Threshold": true,
+    "Crisis Absorb": true,
+    "Max HP": true,
+    "Cold Chance Defense": true,
+    "Movement Speed": true
   },
   "OrangBunian": {
-    "Additional Minions": false,
-    "Minion Max HP": false,
-    "HP Multiplier": false,
-    "Max Skill Uses": false,
-    "Increased Movement Speed": false,
-    "Elemental Chance": false,
-    "Absorb": false,
-    "Increased Projectile Radius": false,
-    "Basic attack as fire": false,
-    "Basic attack as ice": false,
-    "Fire penetration": false,
-    "Ice penetration": false,
-    "Blind on hit": false,
-    "Slow on hit": false,
-    "Fire Resistance Cap": false,
-    "Ice Resistance Cap": false,
-    "Attack Damage": false,
-    "Cooldown Reduction": false,
-    "Skill Speed": false,
-    "Class Passives Multiplier": false,
-    "Triggered Chance No Charge Use": false,
-    "Triggered Damage Multiplier": false,
-    "Crisis Damage": false,
-    "Minion Movement Speed": false
+    "Additional Minions": true,
+    "Minion Max HP": true,
+    "HP Multiplier": true,
+    "Max Skill Uses": true,
+    "Increased Movement Speed": true,
+    "Elemental Chance": true,
+    "Absorb": true,
+    "Increased Projectile Radius": true,
+    "Basic attack as fire": true,
+    "Basic attack as ice": true,
+    "Fire penetration": true,
+    "Ice penetration": true,
+    "Blind on hit": true,
+    "Slow on hit": true,
+    "Fire Resistance Cap": true,
+    "Ice Resistance Cap": true,
+    "Attack Damage": true
   },
   "Awakened": {
-    "Minion Damage": false,
-    "Minion Avoidance": false,
-    "MP Multiplier": false,
-    "Cooldown Reduction": false,
-    "Elemental Multiplier": false,
-    "Elemental Resistance": false,
-    "Projectile Speed": false,
-    "Armour Break": false,
-    "Basic attack as lightning": false,
-    "Basic attack as poison": false,
-    "Lightning penetration": false,
-    "Poison penetration": false,
-    "Frenzy on hit": false,
-    "Agility on hit": false,
-    "Lightning Resistance Cap": false,
-    "Poison Resistance Cap": false,
-    "Skill Damage": false,
-    "Critical Hit Multiplier": false,
-    "Crisis Threshold": false,
-    "Triggered Chance No Charge Use": false,
-    "Triggered Skill Speed": false,
-    "Crisis Absorb": false,
-    "Movement Skill Distance Multiplier": false
+    "Minion Damage": true,
+    "Minion Avoidance": true,
+    "MP Multiplier": true,
+    "Cooldown Reduction": true,
+    "Elemental Multiplier": true,
+    "Elemental Resistance": true,
+    "Projectile Speed": true,
+    "Armour Break": true,
+    "Basic attack as lightning": true,
+    "Basic attack as poison": true,
+    "Lightning penetration": true,
+    "Poison penetration": true,
+    "Frenzy on hit": true,
+    "Agility on hit": true,
+    "Lightning Resistance Cap": true,
+    "Poison Resistance Cap": true,
+    "Skill Damage": true,
+    "Critical Hit Multiplier": true,
+    "Crisis Threshold": true,
+    "Triggered Chance No Charge Use": true,
+    "Triggered Skill Speed": true,
+    "Crisis Absorb": true,
+    "Movement Skill Distance Multiplier": true
   }
 }
 ```
 
-### How to Configure
+### Core Classes
 
-1. Set `true` for affixes you want to be available for selection
-2. Set `false` for affixes you want to disable
-3. The mod will select the first enabled affix from the list when an implicit is rolled
-4. If no affixes are enabled, the original random selection will be used
-5. Save the file and restart the game for changes to take effect
+#### `ModConfig.cs`
 
-## Default Configuration
+- **Purpose**: Configuration management and JSON serialization/deserialization
+- **Key Features**:
+  - Simplified flat structure (removed nested `TagConfigurations` and `ForcedAffixes`)
+  - Static `AffixNameMapping` dictionary for display name to `ItemAffixName` conversion
+  - Automatic configuration file creation with defaults
+  - Error handling for invalid JSON
 
-By default, only "Increased buff effect" is enabled for Keropok items, while all other affixes are disabled. This means:
+#### `MaxSpecialModifiersPatch.cs`
 
-- **Keropok items**: Will always get "Increased buff effect" implicit
-- **Orang Bunian items**: Will use original random selection (no affixes enabled)
-- **Awakened items**: Will use original random selection (no affixes enabled)
+- **Purpose**: Main Harmony patching logic
+- **Key Methods**:
+  - `Prefix(AddOrReplaceImplicit)`: Intercepts affix addition and applies forced affixes
+  - `Postfix(AddOrReplaceImplicit)`: Maximizes implicit modifiers after addition
+  - `ForceImplicitAffixes()`: Handles forced affix selection and application
+  - `MaximizeImplicitModifiers()`: Sets modifier values to maximum using reflection
+  - `SetModifierInstanceToMax()`: Core maximization logic with level scaling
 
-## Usage
+#### `KeropokManager.cs`
 
-1. Install the mod by copying the `MaxSpecialModifiers` folder to your game's `mods` directory
-2. Start the game - the configuration file will be created automatically
-3. Edit the configuration file to customize which affixes you want
-4. Restart the game for changes to take effect
-5. Enjoy your customized implicit modifier selection!
+- **Purpose**: Custom Keropok progression control
+- **Key Features**: 6-modifier completion system for Keropok items
 
-## Technical Details
+### Harmony Patches
 
-- The mod uses Harmony patching to intercept implicit modifier selection
-- Configuration is loaded once when the mod starts
-- Changes to the configuration file require a game restart
-- The mod maintains compatibility with the original game's Keropok progression system
+#### `ItemInstancePatch`
+
+- **Target**: `ItemInstance.AddOrReplaceImplicit`
+- **Prefix**: Intercepts affix addition, applies forced affixes if configured
+- **Postfix**: Maximizes all implicit modifiers on the item
+
+#### `AwakenedItemManagerPatch`
+
+- **Target**: `AwakenedItemManager.IncrementKeropokKillCount`
+- **Purpose**: Controls Keropok progression with custom completion logic
+
+### Configuration Behavior
+
+- **Default State**: All affixes enabled (`true`) for maximum compatibility
+- **Selection Logic**: Random selection from enabled affixes per tag type
+- **Fallback**: If no affixes enabled, original game logic is used
+- **Hot Reload**: Configuration changes require game restart
+
+## Development Setup
+
+### Prerequisites
+
+- .NET Framework 4.7.1
+- Visual Studio or compatible IDE
+- Ghostlore modding environment
+
+### Build Process
+
+```bash
+cd max-special-modifiers
+dotnet build
+```
+
+### Key Dependencies
+
+- `Assembly-CSharp.dll` - Ghostlore game assembly
+- `UnityEngine.dll` - Unity engine components
+- `Newtonsoft.Json.dll` - JSON serialization
+- Harmony library - Runtime patching
+
+## Architecture Decisions
+
+### Configuration Simplification
+
+- **Before**: Complex nested structure with `TagConfigurations["TagName"]["ForcedAffixes"]["affix"]`
+- **After**: Flat structure with direct `TagName["affix"]` access
+- **Rationale**: Improved readability and maintainability
+
+### Affix Name Mapping
+
+- **Challenge**: Game uses internal `ItemAffixName` while users prefer display names
+- **Solution**: Static mapping dictionary in `ModConfig` handles conversion automatically
+- **Benefit**: User-friendly configuration with reliable internal name resolution
+
+### Reflection Usage
+
+- **Purpose**: Access private `lower` and `upper` fields in `ModifierInstance`
+- **Risk**: Brittle if game updates change field names
+- **Mitigation**: Cached `FieldInfo` objects for performance
+
+### Tag Matching Strategy
+
+- **Approach**: `Contains()` matching for tag names (e.g., "Keropok" matches "Keropok Food")
+- **Rationale**: Flexible matching handles variations in game tag naming
+- **Priority**: Exact matches first, then partial matches
+
+## Performance Considerations
+
+- **Cached Reflection**: `FieldInfo` objects cached at class level
+- **Efficient Tag Matching**: Early exit on first match found
+- **Minimal Allocations**: Reuse of collections and objects where possible
+- **Conditional Logging**: Debug logging only when enabled
+
+## Error Handling
+
+- **Configuration Loading**: Graceful fallback to defaults on JSON errors
+- **Reflection Failures**: Logged errors with fallback to original game behavior
+- **Affix Resolution**: Detailed logging for missing affixes with graceful degradation
+
+## Testing Strategy
+
+- **Unit Testing**: Configuration serialization/deserialization
+- **Integration Testing**: Harmony patch application and affix resolution
+- **Game Testing**: End-to-end validation with actual Ghostlore items
+
+## Future Enhancements
+
+- **In-Game UI**: Unity-based configuration interface
+- **Preset System**: Predefined configurations for different playstyles
+- **Performance Profiling**: Detailed metrics for affix processing
+- **Additional Tags**: Support for more item tag types beyond the current three

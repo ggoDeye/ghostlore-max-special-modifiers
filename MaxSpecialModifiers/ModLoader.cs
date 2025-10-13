@@ -28,7 +28,12 @@ namespace MaxSpecialModifiers
 				ConfigPath = Path.Combine(Application.persistentDataPath, "max-special-modifiers.config.json");
 				Config = ModConfig.LoadFromFile(ConfigPath);
 
-				Debug.Log($"[MaxSpecialModifiers] Configuration loaded. Debug logging: {Config.DebugLogging}");
+				Debug.Log($"[MaxSpecialModifiers] Configuration loaded. Valid: {Config.IsConfigurationValid}, Debug logging: {Config.DebugLogging}");
+
+				if (!Config.IsConfigurationValid)
+				{
+					Debug.Log("[MaxSpecialModifiers] WARNING: Configuration is invalid - mod will use original game behavior");
+				}
 
 				// Initialize Harmony for patching with error handling
 				harmony = new Harmony("com.max-special-modifiers");

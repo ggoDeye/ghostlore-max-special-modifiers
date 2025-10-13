@@ -34,6 +34,13 @@ namespace MaxSpecialModifiers
 		{
 			try
 			{
+				// Check if configuration is valid - if not, use original game behavior
+				if (ModLoader.Config == null || !ModLoader.Config.IsConfigurationValid)
+				{
+					DebugLog("Configuration is invalid or null, using original game behavior");
+					return true; // Let original method run
+				}
+
 				DebugLog($"[MaxSpecialModifiers] AddOrReplaceImplicit prefix called with tags: {string.Join(", ", tags?.Select(t => t?.GameTagName) ?? new string[0])}");
 				DebugLog($"[MaxSpecialModifiers] Item modifiers at start of prefix: {__instance.Mods?.Mods?.Count ?? 0}");
 				DebugLog($"[MaxSpecialModifiers] Item ID: {__instance.InstanceID}, Item Name: {__instance.Item?.ItemName}");
@@ -54,55 +61,67 @@ namespace MaxSpecialModifiers
 				if (tags != null)
 				{
 					DebugLog($"[MaxSpecialModifiers] Config is null: {ModLoader.Config == null}");
-					if (ModLoader.Config != null)
-					{
-						DebugLog($"[MaxSpecialModifiers] Available config keys: {string.Join(", ", ModLoader.Config.TagConfigurations.Keys)}");
-					}
 
 					// Check if any tag matches our configuration
 					string matchedTagName = null;
 					bool hasConfiguredTag = false;
+					Dictionary<string, bool> forcedAffixes = null;
+
 					foreach (var tag in tags)
 					{
 						if (tag?.GameTagName == null) continue;
 						DebugLog($"[MaxSpecialModifiers] Checking tag: '{tag.GameTagName}'");
 
-						// Simple exact match check
-						if (ModLoader.Config?.TagConfigurations?.ContainsKey(tag.GameTagName) == true)
+						// Check for Keropok
+						if (tag.GameTagName.Contains("Keropok") && ModLoader.Config?.Keropok != null)
 						{
-							DebugLog($"[MaxSpecialModifiers] Found exact match! Tag: '{tag.GameTagName}'");
-							matchedTagName = tag.GameTagName;
+							DebugLog($"[MaxSpecialModifiers] Found Keropok match! Tag: '{tag.GameTagName}'");
+							matchedTagName = "Keropok";
+							forcedAffixes = ModLoader.Config.Keropok;
+							hasConfiguredTag = true;
+							break;
+						}
+						// Check for Orang Bunian
+						else if (tag.GameTagName.Contains("Orang Bunian") && ModLoader.Config?.OrangBunian != null)
+						{
+							DebugLog($"[MaxSpecialModifiers] Found Orang Bunian match! Tag: '{tag.GameTagName}'");
+							matchedTagName = "Orang Bunian";
+							forcedAffixes = ModLoader.Config.OrangBunian;
+							hasConfiguredTag = true;
+							break;
+						}
+						// Check for Awakened
+						else if (tag.GameTagName.Contains("Awakened") && ModLoader.Config?.Awakened != null)
+						{
+							DebugLog($"[MaxSpecialModifiers] Found Awakened match! Tag: '{tag.GameTagName}'");
+							matchedTagName = "Awakened";
+							forcedAffixes = ModLoader.Config.Awakened;
 							hasConfiguredTag = true;
 							break;
 						}
 					}
 
-					if (hasConfiguredTag && !string.IsNullOrEmpty(matchedTagName))
+					if (hasConfiguredTag && !string.IsNullOrEmpty(matchedTagName) && forcedAffixes != null)
 					{
-						// Check if there are any enabled affixes before intercepting
-						if (ModLoader.Config?.TagConfigurations?.TryGetValue(matchedTagName, out var tagConfig) == true &&
-							tagConfig.TryGetValue("ForcedAffixes", out var forcedAffixes))
+						var enabledAffixes = forcedAffixes.Where(kvp => kvp.Value).ToList();
+						if (enabledAffixes.Count > 0)
 						{
-							var enabledAffixes = forcedAffixes.Where(kvp => kvp.Value).ToList();
-							if (enabledAffixes.Count > 0)
-							{
-								DebugLog($"[MaxSpecialModifiers] Intercepting configured item, preventing original logic");
-								DebugLog($"[MaxSpecialModifiers] Item modifiers before forced affix: {__instance.Mods?.Mods?.Count ?? 0}");
+							DebugLog($"[MaxSpecialModifiers] Intercepting configured item, preventing original logic");
+							DebugLog($"[MaxSpecialModifiers] Item modifiers before forced affix: {__instance.Mods?.Mods?.Count ?? 0}");
 
-								// Handle the forced affix addition ourselves
-								bool affixAdded = ForceImplicitAffixes(__instance, tags);
+							// Handle the forced affix addition ourselves
+							bool affixAdded = ForceImplicitAffixes(__instance, tags);
 
-								DebugLog($"[MaxSpecialModifiers] Item modifiers after forced affix: {__instance.Mods?.Mods?.Count ?? 0}");
-								DebugLog($"[MaxSpecialModifiers] ForceImplicitAffixes returned: {affixAdded}");
+							DebugLog($"[MaxSpecialModifiers] Item modifiers after forced affix: {__instance.Mods?.Mods?.Count ?? 0}");
+							DebugLog($"[MaxSpecialModifiers] ForceImplicitAffixes returned: {affixAdded}");
 
-								// Return false to prevent the original method from running
-								DebugLog($"[MaxSpecialModifiers] Returning false to prevent original method");
-								return false;
-							}
-							else
-							{
-								DebugLog($"[MaxSpecialModifiers] No enabled affixes for {matchedTagName}, letting original method run");
-							}
+							// Return false to prevent the original method from running
+							DebugLog($"[MaxSpecialModifiers] Returning false to prevent original method");
+							return false;
+						}
+						else
+						{
+							DebugLog($"[MaxSpecialModifiers] No enabled affixes for {matchedTagName}, letting original method run");
 						}
 					}
 				}
@@ -126,6 +145,13 @@ namespace MaxSpecialModifiers
 		{
 			try
 			{
+				// Check if configuration is valid - if not, skip maximization
+				if (ModLoader.Config == null || !ModLoader.Config.IsConfigurationValid)
+				{
+					DebugLog("Configuration is invalid or null, skipping maximization");
+					return;
+				}
+
 				DebugLog($"[MaxSpecialModifiers] AddOrReplaceImplicit postfix called with tags: {string.Join(", ", tags?.Select(t => t?.GameTagName) ?? new string[0])}");
 				DebugLog($"[MaxSpecialModifiers] Item modifiers in postfix: {__instance.Mods?.Mods?.Count ?? 0}");
 
@@ -301,37 +327,38 @@ namespace MaxSpecialModifiers
 		{
 			try
 			{
-
 				// Find matching tag configuration
-				Dictionary<string, Dictionary<string, bool>> tagConfig = null;
+				Dictionary<string, bool> forcedAffixes = null;
 				string matchedTagName = null;
 
 				foreach (var tag in tags)
 				{
 					if (tag?.GameTagName == null) continue;
 
-					// Check for exact tag name match first
-					if (ModLoader.Config.TagConfigurations.TryGetValue(tag.GameTagName, out tagConfig))
+					// Check for Keropok
+					if (tag.GameTagName.Contains("Keropok") && ModLoader.Config?.Keropok != null)
 					{
-						matchedTagName = tag.GameTagName;
+						forcedAffixes = ModLoader.Config.Keropok;
+						matchedTagName = "Keropok";
 						break;
 					}
-
-					// Check for partial match (e.g., "Keropok" matches "Keropok Food")
-					foreach (var configEntry in ModLoader.Config.TagConfigurations)
+					// Check for Orang Bunian
+					else if (tag.GameTagName.Contains("Orang Bunian") && ModLoader.Config?.OrangBunian != null)
 					{
-						if (tag.GameTagName.Contains(configEntry.Key))
-						{
-							tagConfig = configEntry.Value;
-							matchedTagName = configEntry.Key;
-							break;
-						}
+						forcedAffixes = ModLoader.Config.OrangBunian;
+						matchedTagName = "Orang Bunian";
+						break;
 					}
-
-					if (tagConfig != null) break;
+					// Check for Awakened
+					else if (tag.GameTagName.Contains("Awakened") && ModLoader.Config?.Awakened != null)
+					{
+						forcedAffixes = ModLoader.Config.Awakened;
+						matchedTagName = "Awakened";
+						break;
+					}
 				}
 
-				if (tagConfig == null || !tagConfig.TryGetValue("ForcedAffixes", out var forcedAffixes))
+				if (forcedAffixes == null)
 				{
 					DebugLog($"[MaxSpecialModifiers] No enabled configuration found for tags: {string.Join(", ", tags.Select(t => t?.GameTagName))}");
 					return false;
@@ -343,7 +370,7 @@ namespace MaxSpecialModifiers
 				var itemManager = Singleton<ItemManager>.instance;
 				if (itemManager == null)
 				{
-					Debug.LogError($"[MaxSpecialModifiers] ItemManager instance is null");
+					DebugLog("ItemManager instance is null");
 					return false;
 				}
 
@@ -351,14 +378,14 @@ namespace MaxSpecialModifiers
 				var affixesPoolField = typeof(ItemManager).GetField("affixesPool", BindingFlags.NonPublic | BindingFlags.Instance);
 				if (affixesPoolField == null)
 				{
-					Debug.LogError($"[MaxSpecialModifiers] Could not find affixesPool field in ItemManager");
+					DebugLog("Could not find affixesPool field in ItemManager");
 					return false;
 				}
 
 				var allAffixes = (ItemAffix[])affixesPoolField.GetValue(itemManager);
 				if (allAffixes == null)
 				{
-					Debug.LogError($"[MaxSpecialModifiers] affixesPool is null");
+					DebugLog("affixesPool is null");
 					return false;
 				}
 
@@ -526,6 +553,13 @@ namespace MaxSpecialModifiers
 		{
 			try
 			{
+				// Check if configuration is valid - if not, use original game behavior
+				if (ModLoader.Config == null || !ModLoader.Config.IsConfigurationValid)
+				{
+					DebugLog("Configuration is invalid or null, using original Keropok progression");
+					return true; // Let original method run
+				}
+
 				DebugLog($"[MaxSpecialModifiers] === IncrementKeropokKillCount CALLED ===");
 				DebugLog($"[MaxSpecialModifiers] Item: {item.Item?.ItemName} (ID: {item.InstanceID})");
 				DebugLog($"[MaxSpecialModifiers] Creature: {creature?.Creature?.CreatureName}");

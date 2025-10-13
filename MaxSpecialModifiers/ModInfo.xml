@@ -1,7 +1,72 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ModInfo xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <name>MaxSpecialModifiers</name>
-  <description>This is a template mod. Please update the description.
+  <description>Maximize special modifier affixes on Keropok, Orang Bunian, and Awakened items with configurable forced affixes.
+
+## What This Mod Does
+
+This mod automatically maximizes the special (implicit) affixes on items with Keropok, Orang Bunian, and Awakened tags. You can configure which specific affixes are forced onto these items, giving you control over your gear progression.
+
+## Key Features
+
+- **Automatic Maximization**: All "special" modifier affixes are set to their maximum possible values
+- **Configurable Affixes**: Choose which specific affixes are forced onto your items
+- **Three Item Types Supported**: 
+  - Keropok items 
+  - Orang Bunian items
+  - Awakened items 
+- **Keropok Progression Control**: Custom maximum 6-modifiers added to food before special modifier affix is added for Keropok items
+
+## Configuration
+
+The mod creates a configuration file after being enabled at:
+`%USERPROFILE%\AppData\LocalLow\ATATGames\Ghostlore\max-special-modifiers.config.json`
+All changes require a restart of the game to take effect. Not just a save reload.
+
+### Simple Configuration Example
+
+```json
+{
+  "DebugLogging": false,
+  "Keropok": {
+    "Increased buff effect": true,
+    "HP Regen": true,
+    "Movement Speed": true
+  },
+  "OrangBunian": {
+    "Additional Minions": true,
+    "Minion Max HP": true,
+    "Attack Damage": true
+  },
+  "Awakened": {
+    "Minion Damage": true,
+    "Cooldown Reduction": true,
+    "Critical Hit Multiplier": true
+  }
+}
+```
+
+### How to Configure
+
+1. Start the game with the mod enabled
+2. The configuration file will be created automatically
+3. Close the game and edit the JSON file
+4. Set affixes to `true` to force them, `false` to disable them
+5. Restart the game to apply changes
+
+## Troubleshooting
+
+- **Affixes not appearing**: Check that the affix name matches exactly (case-sensitive). They are correct and all present in the initial file
+- **Configuration not loading**: Ensure the JSON file is valid and in the correct, original location
+- **Debug information**: Set `"DebugLogging": true` to see detailed logs in the game console
+- **If all else fails**: Delete the config file, restart the game, and try again
+
+## Important Notes
+
+- Backup your saves before using this mod
+- Really, really, backup your saves before using this mod. It is new, and does a lot of things that could break your items. It's been tested, but I'm not a professional QA tester, and I'll be amazed if I don't get a bug report.
+- All affixes are enabled by default for maximum compatibility
+- The mod maintains backward compatibility with existing saves
 
 Backup your saves before using this mod.</description>
   <activated>false</activated>
