@@ -111,7 +111,7 @@ namespace MaxSpecialModifiers
 				return false;
 			}
 
-			return affix.Tags.Any(tag => tag?.GameTagName?.Contains("Keropok") == true);
+			return affix.Tags.Any(tag => tag?.GameTagName == "Keropok");
 		}
 
 		/// <summary>

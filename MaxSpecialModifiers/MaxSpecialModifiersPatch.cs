@@ -35,25 +35,41 @@ namespace MaxSpecialModifiers
 			try
 			{
 				DebugLog($"[MaxSpecialModifiers] AddOrReplaceImplicit prefix called with tags: {string.Join(", ", tags?.Select(t => t?.GameTagName) ?? new string[0])}");
+				DebugLog($"[MaxSpecialModifiers] Item modifiers at start of prefix: {__instance.Mods?.Mods?.Count ?? 0}");
+
+				// Log existing affixes
+				if (__instance.Mods?.Mods != null)
+				{
+					foreach (var mod in __instance.Mods.Mods)
+					{
+						if (mod?.Affix?.Affix != null)
+						{
+							DebugLog($"[MaxSpecialModifiers] Existing affix: {mod.Affix.Affix.ItemAffixName}");
+						}
+					}
+				}
 
 				// Check if this is an item with configured forced affixes
 				if (tags != null)
 				{
+					DebugLog($"[MaxSpecialModifiers] Config is null: {ModLoader.Config == null}");
+					if (ModLoader.Config != null)
+					{
+						DebugLog($"[MaxSpecialModifiers] Available config keys: {string.Join(", ", ModLoader.Config.TagConfigurations.Keys)}");
+					}
+
 					// Check if any tag matches our configuration
 					bool hasConfiguredTag = false;
 					foreach (var tag in tags)
 					{
 						if (tag?.GameTagName == null) continue;
+						DebugLog($"[MaxSpecialModifiers] Checking tag: '{tag.GameTagName}'");
 
-						// Check for exact match or partial match
-						foreach (var configEntry in ModLoader.Config.TagConfigurations)
+						// Simple exact match check
+						if (ModLoader.Config?.TagConfigurations?.ContainsKey(tag.GameTagName) == true)
 						{
-							if (tag.GameTagName == configEntry.Key ||
-								(tag.GameTagName.Contains(configEntry.Key) && configEntry.Value.ContainsKey("ForcedAffixes")))
-							{
-								hasConfiguredTag = true;
-								break;
-							}
+							DebugLog($"[MaxSpecialModifiers] Found exact match! Tag: '{tag.GameTagName}'");
+							hasConfiguredTag = true;
 						}
 						if (hasConfiguredTag) break;
 					}
@@ -61,9 +77,12 @@ namespace MaxSpecialModifiers
 					if (hasConfiguredTag)
 					{
 						DebugLog($"[MaxSpecialModifiers] Intercepting configured item, preventing original logic");
+						DebugLog($"[MaxSpecialModifiers] Item modifiers before forced affix: {__instance.Mods?.Mods?.Count ?? 0}");
 
 						// Handle the forced affix addition ourselves
 						ForceImplicitAffixes(__instance, tags);
+
+						DebugLog($"[MaxSpecialModifiers] Item modifiers after forced affix: {__instance.Mods?.Mods?.Count ?? 0}");
 
 						// Return false to prevent the original method from running
 						return false;
@@ -90,6 +109,7 @@ namespace MaxSpecialModifiers
 			try
 			{
 				DebugLog($"[MaxSpecialModifiers] AddOrReplaceImplicit postfix called with tags: {string.Join(", ", tags?.Select(t => t?.GameTagName) ?? new string[0])}");
+				DebugLog($"[MaxSpecialModifiers] Item modifiers in postfix: {__instance.Mods?.Mods?.Count ?? 0}");
 
 				if (!IsSpecialModifierTags(tags))
 				{
