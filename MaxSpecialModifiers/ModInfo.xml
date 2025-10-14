@@ -7,18 +7,15 @@
 
 [h2]What This Mod Does[/h2]
 
-This mod automatically maximizes the special (implicit) affixes on items with Keropok, Orang Bunian, and Awakened tags. You can configure which specific affixes are forced onto these items, giving you control over your gear progression.
+This mod automatically maximizes the special (implicit) affixes for Keropok, Orang Bunian, and Awakened items. You can configure which specific affixes are forced onto these items, giving you total control.
 
 [h2]Key Features[/h2]
 
 [list]
 [*][b]Automatic Maximization[/b]: All "special" modifier affixes are set to their maximum possible values
 [*][b]Configurable Affixes[/b]: Choose which specific affixes are forced onto your items
-[*][b]Three Item Types Supported[/b]:
-[*]Keropok items
-[*]Orang Bunian items
-[*]Awakened items
-[*][b]Keropok Progression Control[/b]: Custom maximum 6-modifiers added to food before special modifier affix is added for Keropok items
+[*][b]Three Item Types Supported[/b]: Keropok items, Orang Bunian items, Awakened items
+[*][b]Keropok Progression Control[/b]: maximum of 6 random modifiers is ensured
 [/list]
 
 [h2]Configuration[/h2]
@@ -33,18 +30,21 @@ All changes require a restart of the game to take effect. Not just a save reload
   "DebugLogging": false,
   "Keropok": {
     "Increased buff effect": true,
-    "HP Regen": true,
-    "Movement Speed": true
+    "HP Regen": false,
+    "Movement Speed": true,
+    ...
   },
   "OrangBunian": {
-    "Additional Minions": true,
-    "Minion Max HP": true,
-    "Attack Damage": true
+    "Additional Minions": false,
+    "Minion Max HP": false,
+    "Attack Damage": true,
+    ...
   },
   "Awakened": {
-    "Minion Damage": true,
+    "Minion Damage": false,
     "Cooldown Reduction": true,
-    "Critical Hit Multiplier": true
+    "Critical Hit Multiplier": true,
+    ...
   }
 }[/code]
 
@@ -71,9 +71,9 @@ All changes require a restart of the game to take effect. Not just a save reload
 
 [list]
 [*]Backup your saves before using this mod
-[*][b]Seriously, backup your saves before using this mod.[/b] It is new and does many things that could break your items. It's been tested, but I'm not a professional QA tester, and I'll be amazed if I don't get a bug report.
-[*]All affixes are enabled by default for maximum compatibility
-[*]The mod maintains backward compatibility with existing saves
+[*][b]Seriously, backup your saves before using this mod.[/b] It is new and does complex things that could break your items due to an oversight. It's been tested, but I'm not a professional QA tester, and I'll be amazed if I don't get a bug report.
+[*]All affixes are enabled by default 
+[*]The mod works with existing saves and is safe to disable.
 [/list]
 
 Source code: [url=https://github.com/ggoDeye/ghostlore-max-special-modifiers]https://github.com/ggoDeye/ghostlore-max-special-modifiers[/url]</description>
