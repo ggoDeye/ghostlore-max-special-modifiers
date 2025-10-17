@@ -17,7 +17,7 @@ namespace MaxSpecialModifiers
 		{
 			if (ModLoader.Config?.DebugLogging == true)
 			{
-				// Debug.Log($"[MaxSpecialModifiers] {message}");
+				Debug.Log($"[MaxSpecialModifiers] {message}");
 			}
 		}
 
@@ -66,7 +66,7 @@ namespace MaxSpecialModifiers
 			}
 			catch (System.Exception ex)
 			{
-				// Debug.LogError($"[MaxSpecialModifiers] Error processing Keropok kill count: {ex.Message}");
+				Debug.LogError($"[MaxSpecialModifiers] Error processing Keropok kill count: {ex.Message}");
 				return false;
 			}
 		}
@@ -141,7 +141,7 @@ namespace MaxSpecialModifiers
 			}
 			catch (System.Exception ex)
 			{
-				// Debug.LogError($"[MaxSpecialModifiers] Error removing from awakenedItems: {ex.Message}");
+				Debug.LogError($"[MaxSpecialModifiers] Error removing from awakenedItems: {ex.Message}");
 			}
 		}
 	}
