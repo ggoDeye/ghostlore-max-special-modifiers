@@ -21,7 +21,7 @@ namespace MaxSpecialModifiers
 		{
 			if (ModLoader.Config?.DebugLogging == true)
 			{
-				Debug.Log($"[MaxSpecialModifiers] {message}");
+				// Debug.Log($"[MaxSpecialModifiers] {message}");
 			}
 		}
 
