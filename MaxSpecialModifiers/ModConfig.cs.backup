@@ -24,7 +24,7 @@ namespace MaxSpecialModifiers
 		{
 			if (ModLoader.Config?.DebugLogging == true)
 			{
-				Debug.Log($"[MaxSpecialModifiers] {message}");
+				// Debug.Log($"[MaxSpecialModifiers] {message}");
 			}
 		}
 
@@ -118,7 +118,7 @@ namespace MaxSpecialModifiers
 			}
 			catch (System.Exception ex)
 			{
-				Debug.LogError($"[MaxSpecialModifiers] Error saving configuration: {ex.Message}");
+				// Debug.LogError($"[MaxSpecialModifiers] Error saving configuration: {ex.Message}");
 			}
 		}
 
@@ -148,8 +148,8 @@ namespace MaxSpecialModifiers
 			}
 			catch (System.Exception ex)
 			{
-				Debug.LogError($"[MaxSpecialModifiers] Error loading configuration: {ex.Message}");
-				Debug.LogError($"[MaxSpecialModifiers] Using fallback configuration - mod will use original game behavior");
+				// Debug.LogError($"[MaxSpecialModifiers] Error loading configuration: {ex.Message}");
+				// Debug.LogError($"[MaxSpecialModifiers] Using fallback configuration - mod will use original game behavior");
 				var fallbackConfig = new ModConfig();
 				fallbackConfig.IsConfigurationValid = false;
 				return fallbackConfig;

@@ -20,7 +20,7 @@ namespace MaxSpecialModifiers
 		/// </summary>
 		public void OnCreated()
 		{
-			Debug.Log("[MaxSpecialModifiers] OnCreated() called - Loading configuration and applying patches...");
+			// Debug.Log("[MaxSpecialModifiers] OnCreated() called - Loading configuration and applying patches...");
 
 			try
 			{
@@ -28,22 +28,22 @@ namespace MaxSpecialModifiers
 				ConfigPath = Path.Combine(Application.persistentDataPath, "max-special-modifiers.config.json");
 				Config = ModConfig.LoadFromFile(ConfigPath);
 
-				Debug.Log($"[MaxSpecialModifiers] Configuration loaded. Valid: {Config.IsConfigurationValid}, Debug logging: {Config.DebugLogging}");
+				// Debug.Log($"[MaxSpecialModifiers] Configuration loaded. Valid: {Config.IsConfigurationValid}, Debug logging: {Config.DebugLogging}");
 
 				if (!Config.IsConfigurationValid)
 				{
-					Debug.Log("[MaxSpecialModifiers] WARNING: Configuration is invalid - mod will use original game behavior");
+					// Debug.Log("[MaxSpecialModifiers] WARNING: Configuration is invalid - mod will use original game behavior");
 				}
 
 				// Initialize Harmony for patching with error handling
 				harmony = new Harmony("com.max-special-modifiers");
-				Debug.Log("[MaxSpecialModifiers] Harmony created, applying patches...");
+				// Debug.Log("[MaxSpecialModifiers] Harmony created, applying patches...");
 				harmony.PatchAll(Assembly.GetExecutingAssembly());
-				Debug.Log("[MaxSpecialModifiers] Patches applied successfully");
+				// Debug.Log("[MaxSpecialModifiers] Patches applied successfully");
 			}
 			catch (System.Exception ex)
 			{
-				Debug.LogError($"[MaxSpecialModifiers] Error applying patches: {ex.Message}");
+				// Debug.LogError($"[MaxSpecialModifiers] Error applying patches: {ex.Message}");
 			}
 		}
 
@@ -66,7 +66,7 @@ namespace MaxSpecialModifiers
 		/// <param name="mode">Either a new game, or a previously saved game.</param>
 		public void OnGameLoaded(LoadMode mode)
 		{
-			Debug.Log("[MaxSpecialModifiers] OnGameLoaded() called");
+			// Debug.Log("[MaxSpecialModifiers] OnGameLoaded() called");
 		}
 
 		/// <summary>
@@ -74,7 +74,7 @@ namespace MaxSpecialModifiers
 		/// </summary>
 		public void OnGameUnloaded()
 		{
-			Debug.Log("[MaxSpecialModifiers] OnGameUnloaded() called");
+			// Debug.Log("[MaxSpecialModifiers] OnGameUnloaded() called");
 		}
 	}
 }

@@ -131,7 +131,7 @@ namespace MaxSpecialModifiers
 			}
 			catch (System.Exception ex)
 			{
-				Debug.LogError($"[MaxSpecialModifiers] Error in AddOrReplaceImplicit prefix: {ex.Message}");
+				// Debug.LogError($"[MaxSpecialModifiers] Error in AddOrReplaceImplicit prefix: {ex.Message}");
 				return true; // Let original method run on error
 			}
 		}
@@ -182,7 +182,7 @@ namespace MaxSpecialModifiers
 			}
 			catch (System.Exception ex)
 			{
-				Debug.LogError($"[MaxSpecialModifiers] Error in AddOrReplaceImplicit postfix: {ex.Message}");
+				// Debug.LogError($"[MaxSpecialModifiers] Error in AddOrReplaceImplicit postfix: {ex.Message}");
 			}
 		}
 
@@ -271,7 +271,7 @@ namespace MaxSpecialModifiers
 			}
 			catch (System.Exception ex)
 			{
-				Debug.LogError($"[MaxSpecialModifiers] Error maximizing modifier: {ex.Message}");
+				// Debug.LogError($"[MaxSpecialModifiers] Error maximizing modifier: {ex.Message}");
 			}
 		}
 
@@ -415,7 +415,7 @@ namespace MaxSpecialModifiers
 			}
 			catch (System.Exception ex)
 			{
-				Debug.LogError($"[MaxSpecialModifiers] Error in ForceImplicitAffixes: {ex.Message}");
+				// Debug.LogError($"[MaxSpecialModifiers] Error in ForceImplicitAffixes: {ex.Message}");
 				return false;
 			}
 		}
@@ -598,7 +598,7 @@ namespace MaxSpecialModifiers
 		{
 			if (ModLoader.Config?.DebugLogging == true)
 			{
-				Debug.Log($"[MaxSpecialModifiers] {message}");
+				// Debug.Log($"[MaxSpecialModifiers] {message}");
 			}
 		}
 
@@ -641,7 +641,7 @@ namespace MaxSpecialModifiers
 			}
 			catch (System.Exception ex)
 			{
-				Debug.LogError($"[MaxSpecialModifiers] Error in IncrementKeropokKillCount prefix: {ex.Message}");
+				// Debug.LogError($"[MaxSpecialModifiers] Error in IncrementKeropokKillCount prefix: {ex.Message}");
 				return true; // Let original method run on error
 			}
 		}
@@ -662,7 +662,7 @@ namespace MaxSpecialModifiers
 			}
 			catch (System.Exception ex)
 			{
-				Debug.LogError($"[MaxSpecialModifiers] Error in IncrementKeropokKillCount postfix: {ex.Message}");
+				// Debug.LogError($"[MaxSpecialModifiers] Error in IncrementKeropokKillCount postfix: {ex.Message}");
 			}
 		}
 
@@ -695,7 +695,7 @@ namespace MaxSpecialModifiers
 			}
 			catch (System.Exception ex)
 			{
-				Debug.LogError($"[MaxSpecialModifiers] Error in IncrementItemKillCount prefix: {ex.Message}");
+				// Debug.LogError($"[MaxSpecialModifiers] Error in IncrementItemKillCount prefix: {ex.Message}");
 				return true;
 			}
 		}
