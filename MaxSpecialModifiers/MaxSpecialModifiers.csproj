@@ -17,19 +17,19 @@
 
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
-      <HintPath>..\..\libs\Assembly-CSharp.dll</HintPath>
+      <HintPath>..\..\..\decompiled\libs\Assembly-CSharp.dll</HintPath>
     </Reference>
     <Reference Include="Ghostlore">
-      <HintPath>..\..\libs\Ghostlore.dll</HintPath>
+      <HintPath>..\..\..\decompiled\libs\Ghostlore.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json">
-      <HintPath>..\..\libs\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\..\..\decompiled\libs\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine">
-      <HintPath>..\..\libs\UnityEngine.dll</HintPath>
+      <HintPath>..\..\..\decompiled\libs\UnityEngine.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
-      <HintPath>..\..\libs\UnityEngine.CoreModule.dll</HintPath>
+      <HintPath>..\..\..\decompiled\libs\UnityEngine.CoreModule.dll</HintPath>
     </Reference>
   </ItemGroup>
 
