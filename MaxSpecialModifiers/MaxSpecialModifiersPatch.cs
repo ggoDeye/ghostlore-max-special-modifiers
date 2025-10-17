@@ -238,8 +238,6 @@ namespace MaxSpecialModifiers
 					continue;
 				}
 
-				DebugLog($"[MaxSpecialModifiers] Checking modifier: {affix.ItemAffixName}, IsImplicit: {((affix.Attributes & ItemModifierAttributes.Implicit) != 0)}, Tags: [{string.Join(", ", affix.Tags?.Select(t => t?.GameTagName) ?? new string[0])}]");
-
 				SetModifierInstanceToMax(modifierInstance, item);
 				maximizedCount++;
 			}
@@ -261,25 +259,15 @@ namespace MaxSpecialModifiers
 				float currentLower = (float)lowerField.GetValue(modifierInstance);
 				float currentUpper = (float)upperField.GetValue(modifierInstance);
 
-				DebugLog($"[MaxSpecialModifiers] Original values - Lower: {currentLower:F3}, Upper: {currentUpper:F3}");
-				DebugLog($"[MaxSpecialModifiers] Modifier properties - LowerMin: {modifier.LowerMin:F3}, LowerMax: {modifier.LowerMax:F3}, LowerPerLevel: {modifier.LowerPerLevel:F3}");
-
 				// Calculate max values
 				float maxLower = CalculateMaxLower(modifier, affix, item);
 				float maxUpper = CalculateMaxUpper(modifier, affix, item);
-
-				DebugLog($"[MaxSpecialModifiers] Calculated max values - Lower: {maxLower:F3}, Upper: {maxUpper:F3}");
 
 				// Set the new values using reflection
 				lowerField.SetValue(modifierInstance, maxLower);
 				upperField.SetValue(modifierInstance, maxUpper);
 
-				// Verify the values were set
-				float newLower = (float)lowerField.GetValue(modifierInstance);
-				float newUpper = (float)upperField.GetValue(modifierInstance);
-				DebugLog($"[MaxSpecialModifiers] After setting - Lower: {newLower:F3}, Upper: {newUpper:F3}");
-
-				DebugLog($"[MaxSpecialModifiers] Maximized modifier: {affix.ItemAffixName} from {currentLower:F2} to max value");
+				DebugLog($"[MaxSpecialModifiers] Maximized modifier: {affix.ItemAffixName}");
 			}
 			catch (System.Exception ex)
 			{
@@ -296,10 +284,6 @@ namespace MaxSpecialModifiers
 			float levelScaling = modifier.LowerPerLevel * item.Level;
 			float totalValue = baseValue + levelScaling;
 
-			DebugLog($"[MaxSpecialModifiers] CalculateMaxLower - Base: {baseValue:F3}, LowerPerLevel: {modifier.LowerPerLevel:F3}, ItemLevel: {item.Level}, Scaling: {levelScaling:F3}");
-
-			// Note: ItemAffix doesn't have a Multiplier property in this version
-
 			return totalValue;
 		}
 
@@ -311,10 +295,6 @@ namespace MaxSpecialModifiers
 			float baseValue = modifier.UpperMax;
 			float levelScaling = modifier.UpperPerLevel * item.Level;
 			float totalValue = baseValue + levelScaling;
-
-			DebugLog($"[MaxSpecialModifiers] CalculateMaxUpper - Base: {baseValue:F3}, UpperPerLevel: {modifier.UpperPerLevel:F3}, ItemLevel: {item.Level}, Scaling: {levelScaling:F3}");
-
-			// Note: ItemAffix doesn't have a Multiplier property in this version
 
 			return totalValue;
 		}
@@ -365,6 +345,7 @@ namespace MaxSpecialModifiers
 				}
 
 				DebugLog($"[MaxSpecialModifiers] Forcing affixes for {matchedTagName} item: {item.Item?.ItemName}");
+				DebugLog($"[MaxSpecialModifiers] Configuration has {forcedAffixes.Count} total affixes for {matchedTagName}");
 
 				// Get all affixes from ItemManager
 				var itemManager = Singleton<ItemManager>.instance;
@@ -389,36 +370,27 @@ namespace MaxSpecialModifiers
 					return false;
 				}
 
-				// Get list of enabled affixes
-				var enabledAffixes = forcedAffixes.Where(kvp => kvp.Value).ToList();
-				if (enabledAffixes.Count == 0)
+				// Step 1: Use the game's approach - filter by MatchesRequirements first
+				var gameFilteredAffixes = allAffixes.Where(affix =>
+					affix != null &&
+					affix.MatchesRequirements(ItemModifierAttributes.Implicit, tags)).ToList();
+
+				// Step 2: Filter by our configuration (using exact CSV names)
+				var configuredAffixes = gameFilteredAffixes.Where(affix =>
 				{
-					DebugLog($"[MaxSpecialModifiers] No enabled affixes found for {matchedTagName}");
+					// Check if this affix is enabled in our configuration using exact CSV name
+					return affix != null && !string.IsNullOrEmpty(affix.ItemAffixName) &&
+						   forcedAffixes.ContainsKey(affix.ItemAffixName) && forcedAffixes[affix.ItemAffixName];
+				}).ToList();
+
+				if (configuredAffixes.Count == 0)
+				{
+					DebugLog($"[MaxSpecialModifiers] No affixes match both game requirements and configuration for {matchedTagName}");
 					return false;
 				}
 
-				// Randomly select one enabled affix
-				var random = new System.Random();
-				var selectedAffix = enabledAffixes[random.Next(enabledAffixes.Count)];
-				var affixName = selectedAffix.Key;
-
-				DebugLog($"[MaxSpecialModifiers] Randomly selected affix: {affixName} from {enabledAffixes.Count} enabled affixes");
-
-				// Get exact ItemAffixName from static mapping
-				var exactAffixName = ModConfig.GetAffixName(affixName);
-				if (string.IsNullOrEmpty(exactAffixName))
-				{
-					DebugLog($"[MaxSpecialModifiers] Could not find mapping for affix: {affixName}");
-					return false;
-				}
-
-				// Find the affix by exact name
-				var targetAffix = FindAffixByName(allAffixes, exactAffixName);
-				if (targetAffix == null)
-				{
-					DebugLog($"[MaxSpecialModifiers] Could not find affix with name: {exactAffixName}");
-					return false;
-				}
+				// Step 3: Use the game's rarity-based selection
+				var targetAffix = GetRandomAffix(configuredAffixes);
 
 				// Check if the item already has this affix
 				bool hasTargetAffix = item.Mods?.Mods?.Any(modifierInstance =>
@@ -426,12 +398,12 @@ namespace MaxSpecialModifiers
 
 				if (hasTargetAffix)
 				{
-					DebugLog($"[MaxSpecialModifiers] Item already has the target affix {affixName}, skipping");
+					DebugLog($"[MaxSpecialModifiers] Item already has the target affix {targetAffix.ItemAffixName}, skipping");
 					return false;
 				}
 
 				// Add the affix to the item's modifier list
-				DebugLog($"[MaxSpecialModifiers] Adding forced affix: {affixName} ({targetAffix.ItemAffixName})");
+				DebugLog($"[MaxSpecialModifiers] Adding forced affix: {targetAffix.ItemAffixName}");
 				item.Mods.AddAffix(targetAffix, item.Level, 1f);
 
 				// Maximize the newly added affixes
@@ -515,8 +487,63 @@ namespace MaxSpecialModifiers
 		/// Finds an affix by its exact ItemAffixName
 		/// This is much more reliable than trying to match by StatID and Multiplicative requirements
 		/// </summary>
-		private static ItemAffix FindAffixByName(ItemAffix[] allAffixes, string affixName)
+		private static ItemAffix FindAffixByName(ItemAffix[] allAffixes, string affixName, GameTag[] tags)
 		{
+			// Determine what type of item this is based on the tags
+			string targetTagName = null;
+			if (tags != null)
+			{
+				foreach (var tag in tags)
+				{
+					if (tag?.GameTagName?.Contains("Keropok") == true)
+					{
+						targetTagName = "Keropok";
+						break;
+					}
+					else if (tag?.GameTagName?.Contains("Orang Bunian") == true)
+					{
+						targetTagName = "Orang Bunian";
+						break;
+					}
+					else if (tag?.GameTagName?.Contains("Awakened") == true)
+					{
+						targetTagName = "Awakened";
+						break;
+					}
+				}
+			}
+
+			// Look for exact tag match first
+			if (!string.IsNullOrEmpty(targetTagName))
+			{
+				foreach (var affix in allAffixes)
+				{
+					if (affix?.ItemAffixName == affixName && affix.Tags != null)
+					{
+						if (affix.Tags.Any(tag => tag?.GameTagName?.Contains(targetTagName) == true))
+						{
+							return affix;
+						}
+					}
+				}
+			}
+
+			// Fall back to any special modifier affix
+			foreach (var affix in allAffixes)
+			{
+				if (affix?.ItemAffixName == affixName && affix.Tags != null)
+				{
+					if (affix.Tags.Any(tag =>
+						tag?.GameTagName?.Contains("Keropok") == true ||
+						tag?.GameTagName?.Contains("Orang Bunian") == true ||
+						tag?.GameTagName?.Contains("Awakened") == true))
+					{
+						return affix;
+					}
+				}
+			}
+
+			// Last resort: any affix with matching name
 			foreach (var affix in allAffixes)
 			{
 				if (affix?.ItemAffixName == affixName)
@@ -524,9 +551,40 @@ namespace MaxSpecialModifiers
 					return affix;
 				}
 			}
-
 			return null;
 		}
+
+		/// <summary>
+		/// Replicates the game's GetRandomAffix method for rarity-based selection
+		/// </summary>
+		private static ItemAffix GetRandomAffix(List<ItemAffix> affixQuery)
+		{
+			if (affixQuery.Count == 0)
+			{
+				return null;
+			}
+
+			if (affixQuery.Count == 1)
+			{
+				return affixQuery[0];
+			}
+
+			float maxInclusive = affixQuery.Sum(affix => affix.Rarity);
+			float num = 0f;
+			float randomValue = UnityEngine.Random.Range(0f, maxInclusive);
+
+			foreach (var affix in affixQuery)
+			{
+				num += affix.Rarity;
+				if (randomValue <= num)
+				{
+					return affix;
+				}
+			}
+
+			return affixQuery.FirstOrDefault();
+		}
+
 	}
 
 	/// <summary>

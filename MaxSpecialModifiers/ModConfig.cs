@@ -33,19 +33,20 @@ namespace MaxSpecialModifiers
 		/// </summary>
 		public Dictionary<string, bool> Keropok { get; set; } = new Dictionary<string, bool>
 		{
-			["Increased buff effect"] = true,
-			["Increased buff duration"] = true,
-			["HP Regen"] = true,
-			["Damage Reflection"] = true,
-			["Elemental Resistance"] = true,
-			["Class Passives Multiplier"] = true,
-			["HP Steal"] = true,
-			["MP Steal"] = true,
-			["Crisis Threshold"] = true,
-			["Crisis Absorb"] = true,
-			["Max HP"] = true,
-			["Cold Chance Defense"] = true,
-			["Movement Speed"] = true
+			// Using exact names from CSV Column 1 (Item Affix Name)
+			["Keropok Increased buff effect"] = true,
+			["Keropok Increased buff duration"] = true,
+			["Keropok HP Regen"] = true,
+			["Keropok Damage Reflection"] = true,
+			["Keropok Elemental Resistance"] = true,
+			["Keropok Class Passives Multiplier"] = true,
+			["Keropok HP Steal"] = true,
+			["Keropok MP Steal"] = true,
+			["Keropok Crisis Threshold"] = true,
+			["Keropok Crisis Absorb"] = true,
+			["Keropok Max HP"] = true,
+			["Keropok Cold Chance Defense"] = true,
+			["Keropok Movement Speed"] = true
 		};
 
 		/// <summary>
@@ -53,6 +54,7 @@ namespace MaxSpecialModifiers
 		/// </summary>
 		public Dictionary<string, bool> OrangBunian { get; set; } = new Dictionary<string, bool>
 		{
+			// Using exact names from CSV Column 1 (Item Affix Name)
 			["Additional Minions"] = true,
 			["Minion Max HP"] = true,
 			["HP Multiplier"] = true,
@@ -69,7 +71,13 @@ namespace MaxSpecialModifiers
 			["Slow on hit"] = true,
 			["Fire Resistance Cap"] = true,
 			["Ice Resistance Cap"] = true,
-			["Attack Damage"] = true
+			["More basic attack damage longer cooldown"] = true,
+			["Class Passives Multiplier"] = true,
+			["Faster cooldown less cast speed"] = true,
+			["Triggered skills reduced cooldown and damage multiplier"] = true,
+			["Triggered skills increased damage"] = true,
+			["Crisis Damage"] = true,
+			["Blessed Minion Movement Speed"] = true
 		};
 
 		/// <summary>
@@ -77,14 +85,8 @@ namespace MaxSpecialModifiers
 		/// </summary>
 		public Dictionary<string, bool> Awakened { get; set; } = new Dictionary<string, bool>
 		{
-			["Minion Damage"] = true,
+			// Using exact names from CSV Column 1 (Item Affix Name) - only the ones that actually exist in game
 			["Minion Avoidance"] = true,
-			["MP Multiplier"] = true,
-			["Cooldown Reduction"] = true,
-			["Elemental Multiplier"] = true,
-			["Elemental Resistance"] = true,
-			["Projectile Speed"] = true,
-			["Armour Break"] = true,
 			["Basic attack as lightning"] = true,
 			["Basic attack as poison"] = true,
 			["Lightning penetration"] = true,
@@ -93,94 +95,15 @@ namespace MaxSpecialModifiers
 			["Agility on hit"] = true,
 			["Lightning Resistance Cap"] = true,
 			["Poison Resistance Cap"] = true,
-			["Skill Damage"] = true,
-			["Critical Hit Multiplier"] = true,
-			["Crisis Threshold"] = true,
-			["Triggered Chance No Charge Use"] = true,
-			["Triggered Skill Speed"] = true,
+			["Faster cooldown less skill damage"] = true,
+			["Faster cooldown less critical multiplier"] = true,
+			["Crisis threshhold"] = true, // Note: typo in CSV - "threshhold" not "threshold"
+			["Triggered skills reduced cooldown and slower cast speed"] = true,
+			["Triggered skills cast speed"] = true,
 			["Crisis Absorb"] = true,
 			["Movement Skill Distance Multiplier"] = true
 		};
 
-		/// <summary>
-		/// Static mapping of affix display names to their exact ItemAffixName in the game
-		/// This ensures we match the correct affix, including complex multi-modifier affixes
-		/// </summary>
-		private static readonly Dictionary<string, string> AffixNameMapping = new Dictionary<string, string>
-		{
-			// Keropok affixes
-			["Increased buff effect"] = "Keropok Increased buff effect",
-			["Increased buff duration"] = "Keropok Increased buff duration",
-			["HP Regen"] = "Keropok HP Regen",
-			["Damage Reflection"] = "Keropok Damage Reflection",
-			["Elemental Resistance"] = "Keropok Elemental Resistance",
-			["Class Passives Multiplier"] = "Keropok Class Passives Multiplier",
-			["HP Steal"] = "Keropok HP Steal",
-			["MP Steal"] = "Keropok MP Steal",
-			["Crisis Threshold"] = "Keropok Crisis Threshold",
-			["Crisis Absorb"] = "Keropok Crisis Absorb",
-			["Max HP"] = "Keropok Max HP",
-			["Cold Chance Defense"] = "Keropok Cold Chance Defense",
-			["Movement Speed"] = "Keropok Movement Speed",
-
-			// Orang Bunian affixes
-			["Additional Minions"] = "Additional Minions",
-			["Minion Max HP"] = "Minion Max HP",
-			["HP Multiplier"] = "HP Multiplier",
-			["Max Skill Uses"] = "Max Skill Uses",
-			["Increased Movement Speed"] = "Increased Movement Speed",
-			["Elemental Chance"] = "Elemental Chance",
-			["Absorb"] = "Absorb",
-			["Increased Projectile Radius"] = "Increased Projectile Radius",
-			["Basic attack as fire"] = "Basic attack as fire",
-			["Basic attack as ice"] = "Basic attack as ice",
-			["Fire penetration"] = "Fire penetration",
-			["Ice penetration"] = "Ice penetration",
-			["Blind on hit"] = "Blind on hit",
-			["Slow on hit"] = "Slow on hit",
-			["Fire Resistance Cap"] = "Fire Resistance Cap",
-			["Ice Resistance Cap"] = "Ice Resistance Cap",
-			["Attack Damage"] = "More basic attack damage longer cooldown",
-			["Class Passives Multiplier"] = "Class Passives Multiplier",
-			["Faster cooldown less cast speed"] = "Faster cooldown less cast speed",
-			["Triggered skills reduced cooldown and damage multiplier"] = "Triggered skills reduced cooldown and damage multiplier",
-			["Triggered skills increased damage"] = "Triggered skills increased damage",
-			["Crisis Damage"] = "Crisis Damage",
-			["Blessed Minion Movement Speed"] = "Blessed Minion Movement Speed",
-
-			// Awakened affixes
-			["Minion Damage"] = "Minion Damage",
-			["Minion Avoidance"] = "Minion Avoidance",
-			["MP Multiplier"] = "MP Multiplier",
-			["Cooldown Reduction"] = "Cooldown Reduction",
-			["Elemental Multiplier"] = "Elemental Multiplier",
-			["Elemental Resistance"] = "Elemental Resistance",
-			["Projectile Speed"] = "Projectile Speed",
-			["Armour Break"] = "Armour Break",
-			["Basic attack as lightning"] = "Basic attack as lightning",
-			["Basic attack as poison"] = "Basic attack as poison",
-			["Lightning penetration"] = "Lightning penetration",
-			["Poison penetration"] = "Poison penetration",
-			["Frenzy on hit"] = "Frenzy on hit",
-			["Agility on hit"] = "Agility on hit",
-			["Lightning Resistance Cap"] = "Lightning Resistance Cap",
-			["Poison Resistance Cap"] = "Poison Resistance Cap",
-			["Skill Damage"] = "Faster cooldown less skill damage",
-			["Critical Hit Multiplier"] = "Faster cooldown less critical multiplier",
-			["Crisis Threshold"] = "Crisis threshhold",
-			["Triggered Chance No Charge Use"] = "Triggered skills reduced cooldown and slower cast speed",
-			["Triggered Skill Speed"] = "Triggered skills cast speed",
-			["Crisis Absorb"] = "Crisis Absorb",
-			["Movement Skill Distance Multiplier"] = "Movement Skill Distance Multiplier"
-		};
-
-		/// <summary>
-		/// Gets the exact ItemAffixName for an affix display name
-		/// </summary>
-		public static string GetAffixName(string displayName)
-		{
-			return AffixNameMapping.TryGetValue(displayName, out var affixName) ? affixName : "";
-		}
 
 		/// <summary>
 		/// Saves the configuration to JSON file
